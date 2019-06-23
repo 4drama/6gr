@@ -741,19 +741,38 @@ uint32_t add_player(game_info *info, std::string name, bool is_visible){
 }
 
 namespace{
-
-void open_adjacent(game_info *info, uint32_t player_index, uint32_t cell_index){
+void open_adjacent_f(game_info *info, uint32_t player_index, uint32_t cell_index,
+	cardinal_directions_t dir, uint32_t depth){
 	using cd_t = cardinal_directions_t;
+
+	cell *cell = &info->map[cell_index];
+	cell->player_visible[player_index] = true;
+
+	if(depth == 0)
+		return;
+
+	uint32_t dir_index = cell->indeces[(int)dir];
+	open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+
+	dir = next(dir);
+	dir_index = cell->indeces[(int)dir];
+	open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+}
+
+void open_adjacent_f(game_info *info, uint32_t player_index, uint32_t cell_index,
+	uint32_t depth){
+	using cd_t = cardinal_directions_t;
+
 	cell *cell = &info->map[cell_index];
 	cell->player_visible[player_index] = true;
 	for(cd_t dir = cd_t::BEGIN; dir < cd_t::END; dir = (cd_t)((int)dir + 1)){
 		uint32_t dir_index = cell->indeces[(int)dir];
-		info->map[dir_index].player_visible[player_index] = true;
+		open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
 	}
 }
 
 }
 
 void player_respawn(game_info *info, uint32_t player_index){
-	open_adjacent(info, player_index, 0);
+	open_adjacent_f(info, player_index, 0, 3);
 }
