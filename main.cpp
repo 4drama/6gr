@@ -14,6 +14,9 @@ int main(){
 	sf::Clock clock;
 	float time;
 
+	uint32_t player_index = add_player(&info, "Player 1", true);
+	player_respawn(&info, player_index);
+
 	while(info.window.isOpen()){
 		event_handler(&info);
 

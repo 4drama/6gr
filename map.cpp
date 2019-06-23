@@ -490,12 +490,121 @@ bool on_screen_f(cell *cell, sf::View *view){
 	return true;
 }
 
+sf::Color get_color_in_view(terrain_en terr){
+	switch(terr){
+		case terrain_en::RIVER :
+			return sf::Color(10, 10, 100);
+			break;
+		case terrain_en::MOUNTAIN :
+			return sf::Color(50, 50, 50);
+			break;
+		case terrain_en::PLAIN :
+			return sf::Color(150, 50, 20);
+			break;
+		case terrain_en::PALM :
+			return sf::Color(150, 50, 20);
+			break;
+	}
+}
+
+sf::Color get_color_out_of_view(terrain_en terr){
+	switch(terr){
+		case terrain_en::RIVER :
+			return sf::Color(80, 80, 90);
+			break;
+		case terrain_en::MOUNTAIN :
+			return sf::Color(80, 80, 80);
+			break;
+		case terrain_en::PLAIN :
+			return sf::Color(115, 100, 100);
+			break;
+		case terrain_en::PALM :
+			return sf::Color(100, 100, 80);
+			break;
+	}
+}
+
+sf::Sprite get_sprite_out_of_view(terrain_en terr, sf::Vector2f pos){
+	sf::Sprite result(object::textures[(int)object::texture_type::SCHEME]);
+	int width = 50;
+	int height = 50;
+	sf::IntRect rectangle{};
+	switch(terr){
+		case terrain_en::RIVER :
+			rectangle = sf::IntRect{0 + 2 * width, 0, width, height};
+		//	frame.setTexture(object::textures[(int)object::texture_type::MOUNTAIN]);
+			break;
+		case terrain_en::MOUNTAIN :
+			rectangle = sf::IntRect{0 + 0 * width, 0, width, height};
+			break;
+		case terrain_en::PALM :
+			rectangle = sf::IntRect{0 + 1 * width, 0, width, height};
+			break;
+		default:
+			rectangle = sf::IntRect{0, 0, 0, 0};
+	}
+	result.setTextureRect(rectangle);
+	result.setOrigin(25, 25);
+	result.setScale(0.2, -0.2);
+	result.setPosition(pos);
+	return result;
+}
+
+bool any_of_player_f(std::vector<uint32_t> *visible_players_indeces,
+	std::vector<bool> *player_visible){
+
+	for(auto& player_index: *visible_players_indeces){
+		if(player_visible->at(player_index))
+			return true;
+	}
+	return false;
+}
+
+void draw_scheme_map_f(game_info *info){
+	for(auto &cell : info->map){
+		if(any_of_player_f(&info->visible_players_indeces, &cell.player_visible)
+			&& on_screen_f(&cell, &info->view)){
+
+			sf::Vertex transform_shape[] = {
+				perspective_vertex_f(cell::shape[0], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[1], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[2], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[3], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[4], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[5], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[6], cell.pos, &info->view)
+			};
+
+			sf::ConvexShape polygon;
+			polygon.setPointCount(6);
+			polygon.setPoint(0, transform_shape[0].position);
+			polygon.setPoint(1, transform_shape[1].position);
+			polygon.setPoint(2, transform_shape[2].position);
+			polygon.setPoint(3, transform_shape[3].position);
+			polygon.setPoint(4, transform_shape[4].position);
+			polygon.setPoint(5, transform_shape[5].position);
+			polygon.setPoint(6, transform_shape[6].position);
+
+			polygon.setFillColor(get_color_out_of_view(cell.ter.type));
+
+			if((transform_shape[0].position.y < transform_shape[1].position.y)){
+				info->window.draw(polygon);
+				if(info->draw_cells)
+					info->window.draw(transform_shape, 7, sf::LineStrip);
+				info->window.draw(get_sprite_out_of_view(cell.ter.type,
+					perspective_f(cell.pos, &info->view)));
+			}
+		}
+	}
+}
+
 }
 
 void draw_map(game_info *info, float time){
 	std::vector<sf::Sprite> object_sprites{};
 
-	for(auto &cell : info->map){
+	draw_scheme_map_f(info);
+/*	for(auto &cell : info->map){
 		if(on_screen_f(&cell, &info->view)){
 			sf::Vertex transform_shape[] = {
 				perspective_vertex_f(cell::shape[0], cell.pos, &info->view),
@@ -521,27 +630,20 @@ void draw_map(game_info *info, float time){
 		//	polygon.setOutlineThickness(5);
 	//		polygon.setPosition(cell.pos);
 
-			switch(cell.ter.type){
-				case terrain_en::RIVER : polygon.setFillColor(sf::Color(10, 10, 100));
-					break;
-				case terrain_en::MOUNTAIN : polygon.setFillColor(sf::Color(50, 50, 50));
-					break;
-				case terrain_en::PLAIN : polygon.setFillColor(sf::Color(150, 50, 20));
-					break;
-				case terrain_en::PALM : polygon.setFillColor(sf::Color(40, 130, 10));
-					break;
-			}
+			polygon.setFillColor(get_color_out_of_view(cell.ter.type));
 
-		if((transform_shape[0].position.y < transform_shape[1].position.y)){
-			info->window.draw(polygon);
-			if(info->draw_cells)
-				info->window.draw(transform_shape, 7, sf::LineStrip);
-			for(auto &obj : cell.ter.objects){
-				sf::Sprite sprite = obj.update_sprite(time);
-				sprite.setPosition(perspective_f(cell.pos + obj.pos, &info->view));
-				object_sprites.emplace_back(sprite);
+			if((transform_shape[0].position.y < transform_shape[1].position.y)){
+				info->window.draw(polygon);
+				if(info->draw_cells)
+					info->window.draw(transform_shape, 7, sf::LineStrip);
+				info->window.draw(get_sprite_out_of_view(cell.ter.type,
+					perspective_f(cell.pos, &info->view)));
+				for(auto &obj : cell.ter.objects){
+					sf::Sprite sprite = obj.update_sprite(time);
+					sprite.setPosition(perspective_f(cell.pos + obj.pos, &info->view));
+					object_sprites.emplace_back(sprite);
+				}
 			}
-		}
 	}
 
 //		draw_path(window, &cell, map);
@@ -553,7 +655,7 @@ void draw_map(game_info *info, float time){
 
 	for(auto &sprite : object_sprites){
 		info->window.draw(sprite);
-	}
+	}*/
 }
 
 void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed){
@@ -592,6 +694,7 @@ std::vector<cell> generate_world(uint32_t size){
 void object::fill_textures(){
 	object::textures.resize((int)object::texture_type::SIZE);
 
+	object::textures[(int)object::texture_type::SCHEME].loadFromFile("ch_map.png");
 	object::textures[(int)object::texture_type::PALM].loadFromFile("palms.png");
 	object::textures[(int)object::texture_type::MOUNTAIN].loadFromFile("mountain.png");
 }
@@ -615,4 +718,42 @@ game_info::game_info()
 	cell::set_side_size(side_size);
 
 	map = generate_world(40u);
+}
+
+uint32_t add_player(game_info *info, std::string name, bool is_visible){
+	if(info->map.size() == 0)
+		throw std::runtime_error("World not created.");
+
+	player player{};
+	if(name != "")
+		player.name = name;
+
+	uint32_t player_index = info->players.size();
+	if(is_visible)
+		info->visible_players_indeces.emplace_back(player_index);
+	info->players.emplace_back(player);
+
+	uint32_t players_count = info->players.size();
+	std::for_each(info->map.begin(), info->map.end(),
+		[&players_count](cell &cell){ cell.player_visible.emplace_back(false); });
+
+	return player_index;
+}
+
+namespace{
+
+void open_adjacent(game_info *info, uint32_t player_index, uint32_t cell_index){
+	using cd_t = cardinal_directions_t;
+	cell *cell = &info->map[cell_index];
+	cell->player_visible[player_index] = true;
+	for(cd_t dir = cd_t::BEGIN; dir < cd_t::END; dir = (cd_t)((int)dir + 1)){
+		uint32_t dir_index = cell->indeces[(int)dir];
+		info->map[dir_index].player_visible[player_index] = true;
+	}
+}
+
+}
+
+void player_respawn(game_info *info, uint32_t player_index){
+	open_adjacent(info, player_index, 0);
 }

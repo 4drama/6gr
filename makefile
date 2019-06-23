@@ -11,4 +11,4 @@ all:
 	$(CC) $(LIBFLAGS) main.o map.o control.o -o main.exe $(LDFLAGS)
 
 clean:
-	rm -rf main.o map.o main.exe
+	rm -rf main.o map.o control.o main.exe
