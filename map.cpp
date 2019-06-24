@@ -503,7 +503,7 @@ sf::Color get_color_in_view(terrain_en terr){
 			return sf::Color(150, 50, 20);
 			break;
 		case terrain_en::PALM :
-			return sf::Color(150, 50, 20);
+			return sf::Color(30, 120, 60);
 			break;
 	}
 }
