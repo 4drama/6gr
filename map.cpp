@@ -15,6 +15,7 @@ sf::Vector2f cell::offset[(int)cardinal_directions_t::END] = {};
 sf::Vertex cell::shape[7] = {};
 uint32_t terrain::gen_rate[(int)terrain_en::END][(int)terrain_en::END] = {};
 std::vector<sf::Texture> object::textures{};
+std::vector<sf::Texture> unit::textures{};
 
 cardinal_directions_t against(cardinal_directions_t dir){
 	using cd_t = cardinal_directions_t;
@@ -598,12 +599,86 @@ void draw_scheme_map_f(game_info *info){
 	}
 }
 
+void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces, float time){
+	std::vector<sf::Sprite> object_sprites{};
+	for(auto cell_index : *vision_indeces){
+		cell &cell = info->map[cell_index];
+		if(any_of_player_f(&info->visible_players_indeces, &cell.player_visible)
+			&& on_screen_f(&cell, &info->view)){
+
+			sf::Vertex transform_shape[] = {
+				perspective_vertex_f(cell::shape[0], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[1], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[2], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[3], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[4], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[5], cell.pos, &info->view),
+				perspective_vertex_f(cell::shape[6], cell.pos, &info->view)
+			};
+
+			sf::ConvexShape polygon;
+			polygon.setPointCount(6);
+			polygon.setPoint(0, transform_shape[0].position);
+			polygon.setPoint(1, transform_shape[1].position);
+			polygon.setPoint(2, transform_shape[2].position);
+			polygon.setPoint(3, transform_shape[3].position);
+			polygon.setPoint(4, transform_shape[4].position);
+			polygon.setPoint(5, transform_shape[5].position);
+			polygon.setPoint(6, transform_shape[6].position);
+
+			polygon.setFillColor(get_color_in_view(cell.ter.type));
+
+			if((transform_shape[0].position.y < transform_shape[1].position.y)){
+				info->window.draw(polygon);
+				if(info->draw_cells)
+					info->window.draw(transform_shape, 7, sf::LineStrip);
+				for(auto &obj : cell.ter.objects){
+					sf::Sprite sprite = obj.update_sprite(time);
+					sprite.setPosition(perspective_f(cell.pos + obj.pos, &info->view));
+					object_sprites.emplace_back(sprite);
+				}
+			}
+		}
+	}
+
+	std::sort(object_sprites.begin(), object_sprites.end(),
+		[](sf::Sprite f, sf::Sprite s)
+		{ return f.getPosition().y > s.getPosition().y;});
+
+	for(auto &sprite : object_sprites){
+		info->window.draw(sprite);
+	}
+}
+
 }
 
 void draw_map(game_info *info, float time){
-	std::vector<sf::Sprite> object_sprites{};
+//	std::vector<sf::Sprite> object_sprites{};
 
 	draw_scheme_map_f(info);
+
+	std::vector<uint32_t> vision_indeces{};
+	for(auto &player_index : info->visible_players_indeces){
+		for(auto &unit : info->players[player_index].units){
+			unit.open_vision(info, player_index);
+			std::copy(unit.vision_indeces.begin(), unit.vision_indeces.end(),
+				std::back_inserter(vision_indeces));
+		}
+	}
+	std::sort(vision_indeces.begin(), vision_indeces.end());
+	std::unique(vision_indeces.begin(), vision_indeces.end());
+
+	draw_vision_map_f(info, &vision_indeces, time);
+
+	for(auto &player : info->players){
+		for(auto &unit : player.units){
+			for(auto &sprite : unit.sprites){
+				sprite.setPosition(
+					perspective_f(info->map[unit.cell_index].pos, &info->view));
+				info->window.draw(sprite);
+			}
+		}
+	}
 /*	for(auto &cell : info->map){
 		if(on_screen_f(&cell, &info->view)){
 			sf::Vertex transform_shape[] = {
@@ -718,6 +793,7 @@ game_info::game_info()
 	cell::set_side_size(side_size);
 
 	map = generate_world(40u);
+	unit::fill_textures();
 }
 
 uint32_t add_player(game_info *info, std::string name, bool is_visible){
@@ -741,38 +817,131 @@ uint32_t add_player(game_info *info, std::string name, bool is_visible){
 }
 
 namespace{
-void open_adjacent_f(game_info *info, uint32_t player_index, uint32_t cell_index,
-	cardinal_directions_t dir, uint32_t depth){
+std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
+	uint32_t cell_index, cardinal_directions_t dir, uint32_t depth){
 	using cd_t = cardinal_directions_t;
+
+	std::vector<uint32_t> dst{};
+	dst.emplace_back(cell_index);
 
 	cell *cell = &info->map[cell_index];
 	cell->player_visible[player_index] = true;
 
 	if(depth == 0)
-		return;
+		return dst;
+	std::vector<uint32_t> src{};
 
 	uint32_t dir_index = cell->indeces[(int)dir];
-	open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+	src = open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+	std::copy(src.begin(), src.end(), std::back_inserter(dst));
 
 	dir = next(dir);
 	dir_index = cell->indeces[(int)dir];
-	open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+	src = open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+	std::copy(src.begin(), src.end(), std::back_inserter(dst));
+
+	return dst;
 }
 
-void open_adjacent_f(game_info *info, uint32_t player_index, uint32_t cell_index,
-	uint32_t depth){
+std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
+	uint32_t cell_index, uint32_t depth){
 	using cd_t = cardinal_directions_t;
+
+	std::vector<uint32_t> dst{};
+	dst.emplace_back(cell_index);
 
 	cell *cell = &info->map[cell_index];
 	cell->player_visible[player_index] = true;
+
 	for(cd_t dir = cd_t::BEGIN; dir < cd_t::END; dir = (cd_t)((int)dir + 1)){
 		uint32_t dir_index = cell->indeces[(int)dir];
-		open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+		std::vector<uint32_t> src =
+			open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+
+		std::copy(src.begin(), src.end(), std::back_inserter(dst));
 	}
+
+	std::sort(dst.begin(), dst.end());
+	std::unique(dst.begin(), dst.end());
+	return dst;
 }
 
+}
+
+void unit::open_vision(game_info *info, uint32_t player_index){
+	this->vision_indeces = open_adjacent_f(info, player_index,
+		this->cell_index, this->vision_range);
 }
 
 void player_respawn(game_info *info, uint32_t player_index){
-	open_adjacent_f(info, player_index, 0, 3);
+	uint32_t spawn_cell_index = 0;
+	open_adjacent_f(info, player_index, spawn_cell_index, 6);
+	info->view.setCenter(info->map[spawn_cell_index].pos);
+
+	unit caravan =
+		unit::create_caravan(unit::weight_level_type::LIGHT, spawn_cell_index);
+	info->players[player_index].units.emplace_back(caravan);
+}
+
+void unit::fill_textures(){
+	unit::textures.resize((int)unit::unit_type::SIZE);
+
+	unit::textures[(int)unit::unit_type::CARAVAN].loadFromFile("caravan_60x60x8.png");
+}
+
+namespace{
+
+sf::Sprite create_sprite_f(sf::Texture *texture,
+	int width, int height, int column, int raw){
+
+	sf::Sprite frame;
+
+	sf::IntRect rectangle{0 + width * column, 0 + height * raw,
+		 width, height};
+
+	frame.setTexture(*texture);
+	frame.setTextureRect(rectangle);
+	frame.setOrigin(width / 2, height / 2);
+	frame.setScale (0.2, -0.2);
+	return frame;
+}
+
+}
+
+unit unit::create_caravan(unit::weight_level_type weight, uint32_t cell_index_){
+	unit result{};
+	result.vision_range = 3;
+	result.cell_index = cell_index_;
+	result.sprites.emplace_back(
+		create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+		60, 60, 0, 0));
+
+	switch(weight){
+		case unit::weight_level_type::LIGHT :
+			result.sprites.emplace_back(
+				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+				60, 60, 2, 0));
+		break;
+		case unit::weight_level_type::LOADED :
+		result.sprites.emplace_back(
+			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+			60, 60, 1, 0));
+		result.sprites.emplace_back(
+			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+			60, 60, 0, 1));
+		break;
+		case unit::weight_level_type::OVERLOADED :
+		result.sprites.emplace_back(
+			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+			60, 60, 1, 0));
+		result.sprites.emplace_back(
+			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+			60, 60, 0, 1));
+		result.sprites.emplace_back(
+			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+			60, 60, 1, 1));
+		break;
+	}
+
+	return result;
 }

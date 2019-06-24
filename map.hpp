@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <utility>
 
+struct game_info;
+
 enum class cardinal_directions_t{
 	BEGIN = 0,
 
@@ -91,8 +93,36 @@ public:
 	std::vector<bool> player_visible;
 };
 
+struct unit{
+	enum class unit_type{
+		CARAVAN = 0,
+
+		SIZE = 1
+	};
+	static std::vector<sf::Texture> textures;
+	static void fill_textures();
+
+	uint32_t cell_index;
+	std::vector<sf::Sprite> sprites;
+
+	uint32_t vision_range = 0;
+	std::vector<uint32_t> vision_indeces{};
+
+
+	enum class weight_level_type{
+		LIGHT,
+		LOADED,
+		OVERLOADED
+	};
+	static unit create_caravan(weight_level_type weight, uint32_t cell_index);
+
+	void open_vision(game_info *info, uint32_t player_index);
+};
+
 struct player{
 	std::string name = "default";
+
+	std::vector<unit> units;
 };
 
 struct game_info{
