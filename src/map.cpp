@@ -759,9 +759,9 @@ std::vector<cell> generate_world(uint32_t size){
 void object::fill_textures(){
 	object::textures.resize((int)object::texture_type::SIZE);
 
-	object::textures[(int)object::texture_type::SCHEME].loadFromFile("ch_map.png");
-	object::textures[(int)object::texture_type::PALM].loadFromFile("palms.png");
-	object::textures[(int)object::texture_type::MOUNTAIN].loadFromFile("mountain.png");
+	object::textures[(int)object::texture_type::SCHEME].loadFromFile("./../data/ch_map.png");
+	object::textures[(int)object::texture_type::PALM].loadFromFile("./../data/palms.png");
+	object::textures[(int)object::texture_type::MOUNTAIN].loadFromFile("./../data/mountain.png");
 }
 
 game_info::game_info()
@@ -890,7 +890,7 @@ void player_respawn(game_info *info, uint32_t player_index){
 void unit::fill_textures(){
 	unit::textures.resize((int)unit::unit_type::SIZE);
 
-	unit::textures[(int)unit::unit_type::CARAVAN].loadFromFile("caravan_60x60x8.png");
+	unit::textures[(int)unit::unit_type::CARAVAN].loadFromFile("./../data/caravan_60x60x8.png");
 }
 
 namespace{
