@@ -153,4 +153,6 @@ uint32_t add_player(game_info *info, std::string name, bool is_visible);
 void add_add_unit(game_info *info, uint32_t player_index /*, unit*/);
 void player_respawn(game_info *info, uint32_t player_index);
 
+sf::Vector2f mouse_on_map(game_info *info);
+
 #endif

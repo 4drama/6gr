@@ -18,7 +18,7 @@ int main(){
 	player_respawn(&info, player_index);
 
 	while(info.window.isOpen()){
-		event_handler(&info);
+		event_handler(&info, time);
 
 		info.window.clear();
 		time = clock.getElapsedTime().asMilliseconds();

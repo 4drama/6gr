@@ -599,8 +599,9 @@ void draw_scheme_map_f(game_info *info){
 	}
 }
 
-void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces, float time){
-	std::vector<sf::Sprite> object_sprites{};
+void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces,
+	float time, std::vector<sf::Sprite> *object_sprites){
+
 	for(auto cell_index : *vision_indeces){
 		cell &cell = info->map[cell_index];
 		if(any_of_player_f(&info->visible_players_indeces, &cell.player_visible)
@@ -635,25 +636,56 @@ void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces, f
 				for(auto &obj : cell.ter.objects){
 					sf::Sprite sprite = obj.update_sprite(time);
 					sprite.setPosition(perspective_f(cell.pos + obj.pos, &info->view));
-					object_sprites.emplace_back(sprite);
+					object_sprites->emplace_back(sprite);
 				}
 			}
 		}
 	}
+}
 
-	std::sort(object_sprites.begin(), object_sprites.end(),
+void draw_objects(game_info *info, std::vector<sf::Sprite> *object_sprites){
+	std::sort(object_sprites->begin(), object_sprites->end(),
 		[](sf::Sprite f, sf::Sprite s)
 		{ return f.getPosition().y > s.getPosition().y;});
 
-	for(auto &sprite : object_sprites){
+	for(auto &sprite : *object_sprites){
 		info->window.draw(sprite);
 	}
+}
+
+bool draw_is_inside(game_info *info, cell *cell, sf::Vector2f pos){
+	sf::Vertex transform_shape[] = {
+		perspective_vertex_f(cell::shape[0], cell->pos, &info->view),
+		perspective_vertex_f(cell::shape[1], cell->pos, &info->view),
+		perspective_vertex_f(cell::shape[2], cell->pos, &info->view),
+		perspective_vertex_f(cell::shape[3], cell->pos, &info->view),
+		perspective_vertex_f(cell::shape[4], cell->pos, &info->view),
+		perspective_vertex_f(cell::shape[5], cell->pos, &info->view),
+		perspective_vertex_f(cell::shape[6], cell->pos, &info->view)
+	};
+
+	for(uint32_t i = 0; i < 6; ++i){
+
+		float x = pos.x;
+		float y = pos.y;
+		float x1 = transform_shape[i].position.x;
+		float y1 = transform_shape[i].position.y;
+		float x2 = transform_shape[i + 1].position.x;
+		float y2 = transform_shape[i + 1].position.y;
+
+		float D = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1);
+
+		if(D < 0)
+			return false;
+	}
+
+	info->window.draw(transform_shape, 7, sf::LineStrip);
+	return true;
 }
 
 }
 
 void draw_map(game_info *info, float time){
-//	std::vector<sf::Sprite> object_sprites{};
 
 	draw_scheme_map_f(info);
 
@@ -668,69 +700,27 @@ void draw_map(game_info *info, float time){
 	std::sort(vision_indeces.begin(), vision_indeces.end());
 	std::unique(vision_indeces.begin(), vision_indeces.end());
 
-	draw_vision_map_f(info, &vision_indeces, time);
+	std::vector<sf::Sprite> object_sprites{};
+	draw_vision_map_f(info, &vision_indeces, time, &object_sprites);
 
 	for(auto &player : info->players){
 		for(auto &unit : player.units){
 			for(auto &sprite : unit.sprites){
 				sprite.setPosition(
 					perspective_f(info->map[unit.cell_index].pos, &info->view));
-				info->window.draw(sprite);
+				object_sprites.emplace_back(sprite);
 			}
 		}
 	}
-/*	for(auto &cell : info->map){
+
+	sf::Vector2f mouse_pos = mouse_on_map(info);
+	for(auto &cell: info->map){
 		if(on_screen_f(&cell, &info->view)){
-			sf::Vertex transform_shape[] = {
-				perspective_vertex_f(cell::shape[0], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[1], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[2], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[3], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[4], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[5], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[6], cell.pos, &info->view)
-			};
-
-			sf::ConvexShape polygon;
-			polygon.setPointCount(6);
-			polygon.setPoint(0, transform_shape[0].position);
-			polygon.setPoint(1, transform_shape[1].position);
-			polygon.setPoint(2, transform_shape[2].position);
-			polygon.setPoint(3, transform_shape[3].position);
-			polygon.setPoint(4, transform_shape[4].position);
-			polygon.setPoint(5, transform_shape[5].position);
-			polygon.setPoint(6, transform_shape[6].position);
-
-		//	polygon.setOutlineColor(sf::Color::Red);
-		//	polygon.setOutlineThickness(5);
-	//		polygon.setPosition(cell.pos);
-
-			polygon.setFillColor(get_color_out_of_view(cell.ter.type));
-
-			if((transform_shape[0].position.y < transform_shape[1].position.y)){
-				info->window.draw(polygon);
-				if(info->draw_cells)
-					info->window.draw(transform_shape, 7, sf::LineStrip);
-				info->window.draw(get_sprite_out_of_view(cell.ter.type,
-					perspective_f(cell.pos, &info->view)));
-				for(auto &obj : cell.ter.objects){
-					sf::Sprite sprite = obj.update_sprite(time);
-					sprite.setPosition(perspective_f(cell.pos + obj.pos, &info->view));
-					object_sprites.emplace_back(sprite);
-				}
-			}
+			draw_is_inside(info, &cell, mouse_pos);
+		}
 	}
 
-//		draw_path(window, &cell, map);
-	}
-
-	std::sort(object_sprites.begin(), object_sprites.end(),
-		[](sf::Sprite f, sf::Sprite s)
-		{ return f.getPosition().y > s.getPosition().y;});
-
-	for(auto &sprite : object_sprites){
-		info->window.draw(sprite);
-	}*/
+	draw_objects(info, &object_sprites);
 }
 
 void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed){
@@ -958,4 +948,18 @@ unit unit::create_caravan(unit::weight_level_type weight, uint32_t cell_index_){
 	}
 
 	return result;
+}
+
+sf::Vector2f mouse_on_map(game_info *info){
+	sf::Vector2i position
+		= sf::Mouse::getPosition() - info->window.getPosition();
+	position
+		= sf::Vector2i(position.x, info->Height - position.y)
+		- sf::Vector2i(info->Width / 2, info->Height / 2);
+
+
+	sf::Vector2f pos = sf::Vector2f(position.x - 9, position.y + 29);
+	sf::Vector2f view_size = info->view.getSize();
+	float rate = info->Width / view_size.x;
+	return sf::Vector2f(pos.x / rate, pos.y / rate);
 }

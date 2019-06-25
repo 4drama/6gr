@@ -5,6 +5,6 @@
 
 #include "map.hpp"
 
-void event_handler(game_info *info);
+void event_handler(game_info *info, float time);
 
 #endif
