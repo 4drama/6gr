@@ -818,7 +818,9 @@ uint32_t add_player(game_info *info, std::string name, bool is_visible){
 
 namespace{
 std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
-	uint32_t cell_index, cardinal_directions_t dir, uint32_t depth){
+	uint32_t cell_index, cardinal_directions_t dir, uint32_t depth,
+	bool to_left, bool to_right){
+
 	using cd_t = cardinal_directions_t;
 
 	std::vector<uint32_t> dst{};
@@ -827,18 +829,29 @@ std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
 	cell *cell = &info->map[cell_index];
 	cell->player_visible[player_index] = true;
 
-	if(depth == 0)
+	if((depth == 0) || (cell->ter.type == terrain_en::MOUNTAIN))
 		return dst;
 	std::vector<uint32_t> src{};
 
 	uint32_t dir_index = cell->indeces[(int)dir];
-	src = open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+	src = open_adjacent_f(info, player_index, dir_index, dir, depth - 1, false, false);
 	std::copy(src.begin(), src.end(), std::back_inserter(dst));
 
-	dir = next(dir);
-	dir_index = cell->indeces[(int)dir];
-	src = open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
-	std::copy(src.begin(), src.end(), std::back_inserter(dst));
+	if(to_left){
+		cd_t previous_dir = previous(dir);
+		dir_index = cell->indeces[(int)previous_dir];
+		src = open_adjacent_f(info, player_index, dir_index, previous_dir,
+			depth - 1, !to_left, !to_right);
+		std::copy(src.begin(), src.end(), std::back_inserter(dst));
+	}
+
+	if(to_right){
+		cd_t next_dir = next(dir);
+		dir_index = cell->indeces[(int)next_dir];
+		src = open_adjacent_f(info, player_index, dir_index, next_dir,
+			depth - 1, !to_left, !to_right);
+		std::copy(src.begin(), src.end(), std::back_inserter(dst));
+	}
 
 	return dst;
 }
@@ -856,13 +869,14 @@ std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
 	for(cd_t dir = cd_t::BEGIN; dir < cd_t::END; dir = (cd_t)((int)dir + 1)){
 		uint32_t dir_index = cell->indeces[(int)dir];
 		std::vector<uint32_t> src =
-			open_adjacent_f(info, player_index, dir_index, dir, depth - 1);
+			open_adjacent_f(info, player_index, dir_index, dir, depth - 1, false, true);
 
 		std::copy(src.begin(), src.end(), std::back_inserter(dst));
 	}
 
-	std::sort(dst.begin(), dst.end());
-	std::unique(dst.begin(), dst.end());
+//	std::sort(dst.begin(), dst.end());
+//	std::unique(dst.begin(), dst.end());
+
 	return dst;
 }
 
