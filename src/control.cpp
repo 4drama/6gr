@@ -1,5 +1,29 @@
 #include "control.hpp"
 
+#include <iostream>
+
+namespace{
+
+void change_zoom_f(game_info *info, int value){
+	if((value < 0) && (info->zoom_manager > -1)){
+		while(value++){
+			--info->zoom_manager;
+			info->view_size.x += 50;
+			info->view_size.y += 50 / info->display_rate;
+		}
+	} else if((value > 0) && (info->zoom_manager < 3)){
+		while(value--){
+			++info->zoom_manager;
+			info->view_size.x -= 50;
+			info->view_size.y -= 50 / info->display_rate;
+		}
+	}
+
+	info->view.setSize(info->view_size);
+}
+
+}
+
 void event_handler(game_info *info, float time, uint32_t player_index){
 	sf::Event event;
 	float speed = 5;
@@ -28,22 +52,23 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Subtract){
-
-			if(info->zoom_manager > -1){
-				--info->zoom_manager;
-				info->view_size.x += 50;
-				info->view_size.y += 50 / info->display_rate;
-				info->view.setSize(info->view_size);
-			}
+			// speed down
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Add){
-			if(info->zoom_manager < 3){
-				++info->zoom_manager;
-				info->view_size.x -= 50;
-				info->view_size.y -= 50 / info->display_rate;
-				info->view.setSize(info->view_size);
-			}
+			// speed up
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Space){
+			// pause
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::LBracket){
+			change_zoom_f(info, -1);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::RBracket){
+			change_zoom_f(info, 1);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::F1){
@@ -61,5 +86,10 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 				left_click_cd = 30;
 			}
 		}
+
+		if( event.type == sf::Event::MouseWheelScrolled ){
+			change_zoom_f(info, event.mouseWheelScroll.delta);
+		}
+
 	}
 }
