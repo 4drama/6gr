@@ -2,9 +2,7 @@
 
 #include <iostream>
 
-namespace{
-
-void change_zoom_f(game_info *info, int value){
+void change_zoom(game_info *info, int value){
 	if((value < 0) && (info->zoom_manager > -1)){
 		while(value++){
 			--info->zoom_manager;
@@ -20,8 +18,6 @@ void change_zoom_f(game_info *info, int value){
 	}
 
 	info->view.setSize(info->view_size);
-}
-
 }
 
 void event_handler(game_info *info, float time, uint32_t player_index){
@@ -88,11 +84,11 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::LBracket){
-			change_zoom_f(info, -1);
+			change_zoom(info, -1);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::RBracket){
-			change_zoom_f(info, 1);
+			change_zoom(info, 1);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::F1){
@@ -113,7 +109,7 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 		}
 
 		if( event.type == sf::Event::MouseWheelScrolled ){
-			change_zoom_f(info, event.mouseWheelScroll.delta);
+			change_zoom(info, event.mouseWheelScroll.delta);
 		}
 
 	}

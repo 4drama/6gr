@@ -6,6 +6,7 @@
 
 #include "map.hpp"
 #include "control.hpp"
+#include "gui.hpp"
 
 #include <iostream>
 
@@ -24,9 +25,10 @@ int main(){
 		time = clock.getElapsedTime().asMilliseconds();
 		clock.restart();
 
-		draw_map(&info, time, player_index);
-
 		info.window.setView(info.view);
+		draw_map(&info, time, player_index);
+		gui::instance().draw(&info);
+
 		info.window.display();
 	}
 

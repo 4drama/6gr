@@ -12,9 +12,10 @@ all:
 	$(CC) $(CFLAGS) $(SRC_DIR)main.cpp -o $(OBJ_DIR)main.o
 	$(CC) $(CFLAGS) $(SRC_DIR)map.cpp -o $(OBJ_DIR)map.o
 	$(CC) $(CFLAGS) $(SRC_DIR)control.cpp -o $(OBJ_DIR)control.o
+	$(CC) $(CFLAGS) $(SRC_DIR)gui.cpp -o $(OBJ_DIR)gui.o
 
 	$(CC) $(LIBFLAGS) $(OBJ_DIR)main.o $(OBJ_DIR)map.o $(OBJ_DIR)control.o \
-	-o $(BIN_DIR)game.exe $(LDFLAGS)
+	$(OBJ_DIR)gui.o -o $(BIN_DIR)game.exe $(LDFLAGS)
 
 play:
 	run.bat
