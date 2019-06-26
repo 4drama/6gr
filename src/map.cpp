@@ -561,20 +561,22 @@ bool any_of_player_f(std::vector<uint32_t> *visible_players_indeces,
 	return false;
 }
 
+void create_transform_shape_f(game_info *info, sf::Vector2f pos,
+	sf::Vertex *transform_shape, sf::Color color){
+
+	for(uint32_t i = 0; i < 7; ++i){
+		transform_shape[i] = perspective_vertex_f(cell::shape[i], pos, &info->view);
+		transform_shape[i].color = color;
+	}
+}
+
 void draw_scheme_map_f(game_info *info){
 	for(auto &cell : info->map){
 		if(any_of_player_f(&info->visible_players_indeces, &cell.player_visible)
 			&& on_screen_f(&cell, &info->view)){
 
-			sf::Vertex transform_shape[] = {
-				perspective_vertex_f(cell::shape[0], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[1], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[2], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[3], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[4], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[5], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[6], cell.pos, &info->view)
-			};
+			sf::Vertex transform_shape[7];
+			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::White);
 
 			sf::ConvexShape polygon;
 			polygon.setPointCount(6);
@@ -607,15 +609,8 @@ void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces,
 		if(any_of_player_f(&info->visible_players_indeces, &cell.player_visible)
 			&& on_screen_f(&cell, &info->view)){
 
-			sf::Vertex transform_shape[] = {
-				perspective_vertex_f(cell::shape[0], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[1], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[2], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[3], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[4], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[5], cell.pos, &info->view),
-				perspective_vertex_f(cell::shape[6], cell.pos, &info->view)
-			};
+			sf::Vertex transform_shape[7];
+			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::White);
 
 			sf::ConvexShape polygon;
 			polygon.setPointCount(6);
@@ -654,15 +649,8 @@ void draw_objects(game_info *info, std::vector<sf::Sprite> *object_sprites){
 }
 
 bool draw_is_inside(game_info *info, cell *cell, sf::Vector2f pos){
-	sf::Vertex transform_shape[] = {
-		perspective_vertex_f(cell::shape[0], cell->pos, &info->view),
-		perspective_vertex_f(cell::shape[1], cell->pos, &info->view),
-		perspective_vertex_f(cell::shape[2], cell->pos, &info->view),
-		perspective_vertex_f(cell::shape[3], cell->pos, &info->view),
-		perspective_vertex_f(cell::shape[4], cell->pos, &info->view),
-		perspective_vertex_f(cell::shape[5], cell->pos, &info->view),
-		perspective_vertex_f(cell::shape[6], cell->pos, &info->view)
-	};
+	sf::Vertex transform_shape[7];
+	create_transform_shape_f(info, cell->pos, transform_shape, sf::Color::White);
 
 	for(uint32_t i = 0; i < 6; ++i){
 
@@ -683,17 +671,39 @@ bool draw_is_inside(game_info *info, cell *cell, sf::Vector2f pos){
 	return true;
 }
 
+void set_selected_cell(game_info *info, uint32_t cell_index, uint32_t player_index){
+	player &player = info->players[player_index];
+	if(player.memory_cell == true){
+		player.sellected_units.clear();
+
+		player.sellected_cell = cell_index;
+		player.memory_cell = false;
+	}
 }
 
-void draw_map(game_info *info, float time){
+void draw_selected_cell(game_info *info, uint32_t player_index){
+	player &player = info->players[player_index];
+
+	if(player.sellected_cell != UINT32_MAX){
+		sf::Vertex transform_shape[7];
+		create_transform_shape_f(info, info->map[player.sellected_cell].pos,
+			transform_shape, sf::Color(88, 244, 122));
+
+		info->window.draw(transform_shape, 7, sf::LineStrip);
+	}
+}
+
+}
+
+void draw_map(game_info *info, float time, uint32_t player_index){
 
 	draw_scheme_map_f(info);
 
 	std::vector<uint32_t> vision_indeces{};
-	for(auto &player_index : info->visible_players_indeces){
-		for(auto &unit : info->players[player_index].units){
-			unit.open_vision(info, player_index);
-			std::copy(unit.vision_indeces.begin(), unit.vision_indeces.end(),
+	for(auto &curr_player_index : info->visible_players_indeces){
+		for(auto &unit : info->players[curr_player_index].units){
+			unit->open_vision(info, curr_player_index);
+			std::copy(unit->vision_indeces.begin(), unit->vision_indeces.end(),
 				std::back_inserter(vision_indeces));
 		}
 	}
@@ -705,21 +715,24 @@ void draw_map(game_info *info, float time){
 
 	for(auto &player : info->players){
 		for(auto &unit : player.units){
-			for(auto &sprite : unit.sprites){
+			for(auto &sprite : unit->sprites){
 				sprite.setPosition(
-					perspective_f(info->map[unit.cell_index].pos, &info->view));
+					perspective_f(info->map[unit->cell_index].pos, &info->view));
 				object_sprites.emplace_back(sprite);
 			}
 		}
 	}
 
 	sf::Vector2f mouse_pos = mouse_on_map(info);
-	for(auto &cell: info->map){
-		if(on_screen_f(&cell, &info->view)){
-			draw_is_inside(info, &cell, mouse_pos);
+	for(uint32_t i = 0; i < info->map.size(); ++i /*auto &cell: info->map*/){
+		if(on_screen_f(&info->map[i], &info->view)){
+			if(draw_is_inside(info, &info->map[i], mouse_pos)){
+				set_selected_cell(info, i, player_index);
+			}
 		}
 	}
 
+	draw_selected_cell(info, player_index);
 	draw_objects(info, &object_sprites);
 }
 
@@ -882,7 +895,7 @@ void player_respawn(game_info *info, uint32_t player_index){
 	open_adjacent_f(info, player_index, spawn_cell_index, 6);
 	info->view.setCenter(info->map[spawn_cell_index].pos);
 
-	unit caravan =
+	std::shared_ptr<unit> caravan =
 		unit::create_caravan(unit::weight_level_type::LIGHT, spawn_cell_index);
 	info->players[player_index].units.emplace_back(caravan);
 }
@@ -912,7 +925,7 @@ sf::Sprite create_sprite_f(sf::Texture *texture,
 
 }
 
-unit unit::create_caravan(unit::weight_level_type weight, uint32_t cell_index_){
+std::shared_ptr<unit> unit::create_caravan(unit::weight_level_type weight, uint32_t cell_index_){
 	unit result{};
 	result.vision_range = 3;
 	result.cell_index = cell_index_;
@@ -947,7 +960,7 @@ unit unit::create_caravan(unit::weight_level_type weight, uint32_t cell_index_){
 		break;
 	}
 
-	return result;
+	return std::make_shared<unit>(result);
 }
 
 sf::Vector2f mouse_on_map(game_info *info){
@@ -962,4 +975,8 @@ sf::Vector2f mouse_on_map(game_info *info){
 	sf::Vector2f view_size = info->view.getSize();
 	float rate = info->Width / view_size.x;
 	return sf::Vector2f(pos.x / rate, pos.y / rate);
+}
+
+void select_cell(game_info *info, uint32_t player_index){
+	info->players[player_index].memory_cell = true;
 }

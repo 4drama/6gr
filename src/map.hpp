@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <utility>
 
+#include <memory>
+
 struct game_info;
 
 enum class cardinal_directions_t{
@@ -114,15 +116,20 @@ struct unit{
 		LOADED,
 		OVERLOADED
 	};
-	static unit create_caravan(weight_level_type weight, uint32_t cell_index);
+	static std::shared_ptr<unit> create_caravan(weight_level_type weight, uint32_t cell_index);
 
 	void open_vision(game_info *info, uint32_t player_index);
 };
 
 struct player{
+	using sellected_unit_type = std::pair< uint32_t, std::weak_ptr<unit> >;
 	std::string name = "default";
 
-	std::vector<unit> units;
+	std::vector< std::shared_ptr<unit> > units;
+
+	bool memory_cell = false;
+	uint32_t sellected_cell = UINT32_MAX;
+	std::vector< sellected_unit_type > sellected_units{};
 };
 
 struct game_info{
@@ -146,7 +153,7 @@ struct game_info{
 
 std::vector<cell> generate_world(uint32_t size);
 void generate_level(std::vector<cell> *map);
-void draw_map(game_info *info, float time);
+void draw_map(game_info *info, float time, uint32_t player_index);
 void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed);
 
 uint32_t add_player(game_info *info, std::string name, bool is_visible);
@@ -155,4 +162,5 @@ void player_respawn(game_info *info, uint32_t player_index);
 
 sf::Vector2f mouse_on_map(game_info *info);
 
+void select_cell(game_info *info, uint32_t player_index);
 #endif

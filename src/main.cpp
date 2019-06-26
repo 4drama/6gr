@@ -18,13 +18,13 @@ int main(){
 	player_respawn(&info, player_index);
 
 	while(info.window.isOpen()){
-		event_handler(&info, time);
+		event_handler(&info, time, player_index);
 
 		info.window.clear();
 		time = clock.getElapsedTime().asMilliseconds();
 		clock.restart();
 
-		draw_map(&info, time);
+		draw_map(&info, time, player_index);
 
 		info.window.setView(info.view);
 		info.window.display();

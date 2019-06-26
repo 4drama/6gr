@@ -1,6 +1,6 @@
 #include "control.hpp"
 
-void event_handler(game_info *info, float time){
+void event_handler(game_info *info, float time, uint32_t player_index){
 	sf::Event event;
 	float speed = 5;
 
@@ -57,13 +57,7 @@ void event_handler(game_info *info, float time){
 		left_click_cd -= time;
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left)){
 			if(left_click_cd <= 0){
-		    //	std::cerr << "Click" << std::endl;
-			/*	sf::Vector2i position
-					= sf::Mouse::getPosition() - info->window.getPosition();
-				sf::Vector2f pos = perspective(sf::Vector2f(position.x, position.y),
-					&info->view);
-				std::cerr << pos.x << ' ' << pos.y << std::endl;*/
-			//	mouse_on_map(info);
+		  		select_cell(info, player_index);
 				left_click_cd = 30;
 			}
 		}
