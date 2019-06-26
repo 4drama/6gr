@@ -80,7 +80,8 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 
 		static float left_click_cd = 0;
 		left_click_cd -= time;
-		if (sf::Mouse::isButtonPressed(sf::Mouse::Left)){
+		if (event.type == sf::Event::MouseButtonPressed &&
+			event.mouseButton.button == sf::Mouse::Button::Left){
 			if(left_click_cd <= 0){
 		  		select_cell(info, player_index);
 				left_click_cd = 30;
