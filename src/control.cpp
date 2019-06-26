@@ -34,6 +34,30 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 		   event.key.code == sf::Keyboard::Escape))
 			info->window.close();
 
+
+		static sf::Vector2f last_pasition = sf::Vector2f(0, 0);
+		static bool is_map_move = false;
+		if (event.type == sf::Event::MouseButtonPressed &&
+			event.mouseButton.button == sf::Mouse::Button::Middle){
+
+			is_map_move = true;
+			last_pasition = mouse_on_map(info);
+
+		} else if(event.type == sf::Event::MouseMoved ){
+
+			if(is_map_move){
+				sf::Vector2f diff = last_pasition - mouse_on_map(info);
+				last_pasition = mouse_on_map(info);
+
+				move_map(&info->map, cardinal_directions_t::WEST, diff.x * 0.65);
+				move_map(&info->map, cardinal_directions_t::SOUTH, diff.y * 1.1);
+			}
+		}
+		if (event.type == sf::Event::MouseButtonReleased &&
+			event.mouseButton.button == sf::Mouse::Button::Middle){
+			is_map_move = false;
+		}
+
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Left){
 			move_map(&info->map, cardinal_directions_t::EAST, speed);
