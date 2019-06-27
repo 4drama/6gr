@@ -131,6 +131,17 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 			}
 		}
 
+		if (event.type == sf::Event::MouseButtonPressed &&
+			event.mouseButton.button == sf::Mouse::Button::Right){
+
+			if(info->players[player_index].sellected_cell != UINT32_MAX){
+				std::list<uint32_t> path = path_find(info,
+					info->players[player_index].sellected_cell,
+					get_cell_index_under_mouse(info));
+				info->path = path;
+			}
+		}
+
 		if( event.type == sf::Event::MouseWheelScrolled ){
 			change_zoom(info, event.mouseWheelScroll.delta);
 		}

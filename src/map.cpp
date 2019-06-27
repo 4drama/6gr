@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <functional>
-
 #include <stdexcept>
 
 const float pi = 3.14159265359;
@@ -451,16 +450,56 @@ void draw_path(sf::RenderWindow *window, cell *curr_cell, std::vector<cell> *map
 	}
 }
 
-std::vector<uint32_t> path_find(
-	std::vector<cell> *map, uint32_t start, uint32_t finish){
-	std::vector<uint32_t> result;
 
+namespace{
 
+struct path_cell{
+	std::list<uint32_t> path{};
+	float weight = 10000000;
+};
 
-/*	if(start == finish){
-		result.emplace_back(finish);
-		return result;
-	}*/
+float get_path_weight_f(std::vector<cell> &map, uint32_t target_cell_index){
+	return 1;
+}
+
+void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
+	std::list<uint32_t> &index_queue, uint32_t index){
+
+	for(auto &next_index : map[index].indeces){
+		float weight = map_path[index].weight + get_path_weight_f(map, next_index);
+		if(map_path[next_index].weight > weight){
+			std::list<uint32_t> path = map_path[index].path;
+			path.emplace_back(next_index);
+			map_path[next_index].path = path;
+			map_path[next_index].weight = weight;
+
+			index_queue.push_back(next_index);
+		}
+	}
+}
+
+}
+
+std::list<uint32_t> path_find(game_info *info,
+	uint32_t start_point, uint32_t finish_point){
+
+	std::vector<path_cell> map_path{};
+	map_path.resize(info->map.size());
+
+	std::list<uint32_t> index_queue{};
+	index_queue.push_back(start_point);
+	map_path[start_point].weight = 0;
+	map_path[start_point].path.emplace_back(start_point);
+
+	uint32_t index;
+	do{
+		 index = index_queue.front();
+		 index_queue.pop_front();
+
+		 fill_queue_f(info->map, map_path, index_queue, index);
+		 if(index == finish_point)
+		 	return map_path[index].path;
+	} while(!index_queue.empty());
 }
 
 namespace{
@@ -648,8 +687,9 @@ void draw_objects(game_info *info, std::vector<sf::Sprite> *object_sprites){
 	}
 }
 
-bool draw_is_inside(game_info *info, cell *cell, sf::Vector2f pos){
-	sf::Vertex transform_shape[7];
+bool is_inside_f(game_info *info, cell *cell, sf::Vector2f pos,
+	sf::Vertex *transform_shape){
+
 	create_transform_shape_f(info, cell->pos, transform_shape, sf::Color::White);
 
 	for(uint32_t i = 0; i < 6; ++i){
@@ -666,9 +706,11 @@ bool draw_is_inside(game_info *info, cell *cell, sf::Vector2f pos){
 		if(D < 0)
 			return false;
 	}
-
-	info->window.draw(transform_shape, 7, sf::LineStrip);
 	return true;
+}
+
+void draw_cell_f(game_info *info, sf::Vertex *transform_shape){
+	info->window.draw(transform_shape, 7, sf::LineStrip);
 }
 
 void set_selected_cell(game_info *info, uint32_t cell_index, uint32_t player_index){
@@ -724,9 +766,11 @@ void draw_map(game_info *info, float time, uint32_t player_index){
 	}
 
 	sf::Vector2f mouse_pos = mouse_on_map(info);
-	for(uint32_t i = 0; i < info->map.size(); ++i /*auto &cell: info->map*/){
+	for(uint32_t i = 0; i < info->map.size(); ++i){
 		if(on_screen_f(&info->map[i], &info->view)){
-			if(draw_is_inside(info, &info->map[i], mouse_pos)){
+			sf::Vertex transform_shape[7];
+			if(is_inside_f(info, &info->map[i], mouse_pos, transform_shape)){
+				draw_cell_f(info, transform_shape);
 				set_selected_cell(info, i, player_index);
 			}
 		}
@@ -979,4 +1023,54 @@ sf::Vector2f mouse_on_map(game_info *info){
 
 void select_cell(game_info *info, uint32_t player_index){
 	info->players[player_index].memory_cell = true;
+}
+
+void draw_path(game_info *info, std::list<uint32_t> path, float progress){
+	float scale = info->view_size.x / info->Width;
+
+	sf::Vector2f first_point = perspective_f(info->map[path.front()].pos, &info->view);
+	path.pop_front();
+	sf::Vector2f second_point = perspective_f(info->map[path.front()].pos, &info->view);
+
+	sf::Vector2f dif = second_point - first_point;
+	dif *= progress;
+	first_point += dif;
+
+	sf::Vertex line[2] = {
+		sf::Vertex(first_point),
+		sf::Vertex(second_point)
+	};
+
+	sf::CircleShape circle{};
+	circle.setRadius(5 * scale);
+	circle.setOrigin(circle.getRadius(), circle.getRadius());
+
+	while(!path.empty()){
+		second_point = perspective_f(info->map[path.front()].pos, &info->view);
+		path.pop_front();
+
+		line[1] = sf::Vertex(second_point);
+		circle.setPosition(second_point);
+
+		info->window.draw(line, 2, sf::Lines);
+		info->window.draw(circle);
+
+		line[0] = line[1];
+	}
+}
+
+uint32_t get_cell_index_under_mouse(game_info *info){
+	sf::Vector2f mouse_pos = mouse_on_map(info);
+
+	uint32_t res = UINT32_MAX;
+	for(uint32_t i = 0; i < info->map.size(); ++i){
+		if(on_screen_f(&info->map[i], &info->view)){
+			sf::Vertex transform_shape[7];
+			if(is_inside_f(info, &info->map[i], mouse_pos, transform_shape)){
+				res = i;
+				break;
+			}
+		}
+	}
+	return res;
 }

@@ -28,7 +28,11 @@ int main(){
 		info.window.setView(info.view);
 		draw_map(&info, time, player_index);
 		gui::instance().draw(&info);
+
 	//	show_cursor_point(&info);
+
+		if(!info.path.empty())
+			draw_path(&info, info.path, 0);	//TO DO DELETE
 
 		info.window.display();
 	}
