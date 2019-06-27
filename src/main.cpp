@@ -28,6 +28,7 @@ int main(){
 		info.window.setView(info.view);
 		draw_map(&info, time, player_index);
 		gui::instance().draw(&info);
+	//	show_cursor_point(&info);
 
 		info.window.display();
 	}

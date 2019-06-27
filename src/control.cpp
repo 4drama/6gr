@@ -1,5 +1,7 @@
 #include "control.hpp"
 
+#include "gui.hpp"
+
 #include <iostream>
 
 void change_zoom(game_info *info, int value){
@@ -38,6 +40,10 @@ void show_grid(game_info *info){
 	info->draw_cells = !info->draw_cells;
 }
 
+void set_speed(game_info *info, game_info::speed_e speed){
+	info->pause = false;
+	info->speed = speed;
+}
 
 void event_handler(game_info *info, float time, uint32_t player_index){
 	sf::Event event;
@@ -119,7 +125,8 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 		if (event.type == sf::Event::MouseButtonPressed &&
 			event.mouseButton.button == sf::Mouse::Button::Left){
 			if(left_click_cd <= 0){
-		  		select_cell(info, player_index);
+				if(!gui::instance().gui_interact(info))
+		  			select_cell(info, player_index);
 				left_click_cd = 30;
 			}
 		}

@@ -16,6 +16,7 @@ struct button{
 	turn state;
 
 	std::function<void(game_info const& info, button* but)> upd;
+	std::function<void(game_info &info, button* but)> inter;
 };
 
 class gui{
@@ -29,6 +30,7 @@ public:
 
 	void update(game_info *info);
 	void draw(game_info *info);
+	bool gui_interact(game_info *info);
 
 private:
 	gui();
@@ -42,5 +44,7 @@ private:
 	std::vector< button > buttons{};
 	button load_button(uint32_t step);
 };
+
+void show_cursor_point(game_info *info);
 
 #endif

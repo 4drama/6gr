@@ -38,6 +38,9 @@ gui::gui(){
 		} else
 			but->state = button::turn::OFF;
 	};
+	buttons[0].inter = [](game_info &info, button* but){
+		change_zoom(&info, 1);
+	};
 
 	buttons[1] = gui::load_button(0);
 	buttons[1].upd = [](game_info const& info, button* but){
@@ -46,7 +49,9 @@ gui::gui(){
 		} else
 			but->state = button::turn::OFF;
 	};
-
+	buttons[1].inter = [](game_info &info, button* but){
+		change_zoom(&info, -1);
+	};
 
 	buttons[2] = gui::load_button(6);
 	buttons[2].upd = [](game_info const& info, button* but){
@@ -54,6 +59,9 @@ gui::gui(){
 			but->state = button::turn::ON;
 		} else
 			but->state = button::turn::OFF;
+	};
+	buttons[2].inter = [](game_info &info, button* but){
+		show_grid(&info);
 	};
 
 	buttons[3] = gui::load_button(2);
@@ -63,6 +71,9 @@ gui::gui(){
 		} else
 			but->state = button::turn::OFF;
 	};
+	buttons[3].inter = [](game_info &info, button* but){
+		set_speed(&info, game_info::speed_e::X4);
+	};
 
 	buttons[4] = gui::load_button(3);
 	buttons[4].upd = [](game_info const& info, button* but){
@@ -70,6 +81,9 @@ gui::gui(){
 			but->state = button::turn::ON;
 		} else
 			but->state = button::turn::OFF;
+	};
+	buttons[4].inter = [](game_info &info, button* but){
+		set_speed(&info, game_info::speed_e::X2);
 	};
 
 	buttons[5] = gui::load_button(4);
@@ -79,6 +93,9 @@ gui::gui(){
 		} else
 			but->state = button::turn::OFF;
 	};
+	buttons[5].inter = [](game_info &info, button* but){
+		set_speed(&info, game_info::speed_e::X1);
+	};
 
 	buttons[6] = gui::load_button(5);
 	buttons[6].upd = [](game_info const& info, button* but){
@@ -86,6 +103,9 @@ gui::gui(){
 			but->state = button::turn::ON;
 		} else
 			but->state = button::turn::OFF;
+	};
+	buttons[6].inter = [](game_info &info, button* but){
+		pause(&info);
 	};
 
 }
@@ -147,4 +167,38 @@ void gui::draw(game_info *info){
 	for(auto &but : buttons){
 		info->window.draw(but.sprites[but.state]);
 	}
+}
+
+namespace{
+	bool is_inside_f(button const& but, sf::Vector2f pos){
+		sf::FloatRect rect = but.sprites[but.state].getGlobalBounds();
+
+		if((rect.left <= pos.x) && ((rect.left + rect.width) >= pos.x) &&
+			(rect.top <= pos.y) && ((rect.top + rect.height) >= pos.y))
+			return true;
+		else
+			return false;
+	}
+}
+
+bool gui::gui_interact(game_info *info){
+	sf::Vector2f pos = mouse_on_map(info);
+
+	for(auto &but : buttons){
+		if(is_inside_f(but, pos)){
+			but.inter(*info, &but);
+			return true;
+		}
+	}
+	return false;
+}
+
+void show_cursor_point(game_info *info){
+	sf::Vector2f pos = mouse_on_map(info);
+
+	sf::CircleShape circle(200);
+	circle.setRadius(0.4);
+	circle.setOrigin(0.2, 0.2);
+	circle.setPosition(pos);
+	info->window.draw(circle);
 }

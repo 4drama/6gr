@@ -12,4 +12,6 @@ void pause(game_info *info);
 void speed_up(game_info *info);
 void speed_down(game_info *info);
 void show_grid(game_info *info);
+void set_speed(game_info *info, game_info::speed_e speed);
+
 #endif
