@@ -25,12 +25,12 @@ void pause(game_info *info){
 }
 
 void speed_up(game_info *info){
-	if(info->speed != game_info::speed_e::X4)
+	if((info->pause != true) && (info->speed != game_info::speed_e::X4))
 		info->speed = (game_info::speed_e)((int)info->speed + 1);
 }
 
 void speed_down(game_info *info){
-	if(info->speed != game_info::speed_e::X1)
+	if((info->pause != true) && (info->speed != game_info::speed_e::X1))
 		info->speed = (game_info::speed_e)((int)info->speed - 1);
 }
 
