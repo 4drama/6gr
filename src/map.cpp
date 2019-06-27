@@ -466,6 +466,9 @@ void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
 	std::list<uint32_t> &index_queue, uint32_t index){
 
 	for(auto &next_index : map[index].indeces){
+		if(next_index == UINT32_MAX)
+			continue;
+
 		float weight = map_path[index].weight + get_path_weight_f(map, next_index);
 		if(map_path[next_index].weight > weight){
 			std::list<uint32_t> path = map_path[index].path;
