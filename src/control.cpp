@@ -20,6 +20,25 @@ void change_zoom(game_info *info, int value){
 	info->view.setSize(info->view_size);
 }
 
+void pause(game_info *info){
+	info->pause = !info->pause;
+}
+
+void speed_up(game_info *info){
+	if(info->speed != game_info::speed_e::X4)
+		info->speed = (game_info::speed_e)((int)info->speed + 1);
+}
+
+void speed_down(game_info *info){
+	if(info->speed != game_info::speed_e::X1)
+		info->speed = (game_info::speed_e)((int)info->speed - 1);
+}
+
+void show_grid(game_info *info){
+	info->draw_cells = !info->draw_cells;
+}
+
+
 void event_handler(game_info *info, float time, uint32_t player_index){
 	sf::Event event;
 	float speed = 5;
@@ -72,15 +91,15 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Subtract){
-			// speed down
+			speed_down(info);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Add){
-			// speed up
+			speed_up(info);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Space){
-			// pause
+			pause(info);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::LBracket){
@@ -92,10 +111,7 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::F1){
-			if(info->draw_cells)
-				info->draw_cells = false;
-			else
-				info->draw_cells = true;
+			show_grid(info);
 		}
 
 		static float left_click_cd = 0;

@@ -138,15 +138,22 @@ struct game_info{
 	sf::RenderWindow window;
 	sf::View view;
 
-	int zoom_manager;
 	sf::Vector2f view_size;
 	float display_rate;
 
 	std::vector<cell> map;
-	bool draw_cells;
 
 	std::vector<player> players;
 	std::vector<uint32_t> visible_players_indeces;
+
+	bool draw_cells;
+	enum speed_e{
+		X1,
+		X2,
+		X4
+	} speed;
+	bool pause;
+	int zoom_manager;
 
 	game_info();
 };

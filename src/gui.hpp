@@ -5,12 +5,17 @@
 
 #include "map.hpp"
 
+#include <functional>
+
 struct button{
 	enum turn{
 		OFF = 0,
 		ON = 1
 	};
 	sf::Sprite sprites[2];
+	turn state;
+
+	std::function<void(game_info const& info, button* but)> upd;
 };
 
 class gui{

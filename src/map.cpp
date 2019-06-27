@@ -576,7 +576,7 @@ void draw_scheme_map_f(game_info *info){
 			&& on_screen_f(&cell, &info->view)){
 
 			sf::Vertex transform_shape[7];
-			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::White);
+			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::Black);
 
 			sf::ConvexShape polygon;
 			polygon.setPointCount(6);
@@ -610,7 +610,7 @@ void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces,
 			&& on_screen_f(&cell, &info->view)){
 
 			sf::Vertex transform_shape[7];
-			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::White);
+			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::Black);
 
 			sf::ConvexShape polygon;
 			polygon.setPointCount(6);
@@ -778,7 +778,7 @@ void object::fill_textures(){
 }
 
 game_info::game_info()
-	: Width(1400), Height(900), draw_cells(false),
+	: Width(1400), Height(900), draw_cells(false), speed(X1), pause(true),
 	window(sf::VideoMode(Width, Height), "Bong"), view(){
 
 	view.setSize(Width, -Height);

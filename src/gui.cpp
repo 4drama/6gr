@@ -3,6 +3,7 @@
 #include "control.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 gui& gui::instance(){
 	static gui i{};
@@ -15,15 +16,11 @@ button gui::load_button(uint32_t step){
 		.setTexture(textures[(int)gui::texture_types::BUTTONS]);
 	button.sprites[button::turn::OFF]
 		.setTextureRect(sf::IntRect(0 + step * 25, 0, 25, 25));
-	button.sprites[button::turn::OFF]
-		.setScale (0.2, -0.2);
 
 	button.sprites[button::turn::ON]
 		.setTexture(textures[(int)gui::texture_types::BUTTONS]);
 	button.sprites[button::turn::ON]
 		.setTextureRect(sf::IntRect(0 + step * 25, 25, 25, 25));
-	button.sprites[button::turn::OFF]
-		.setScale (0.2, -0.2);
 
 	return button;
 }
@@ -32,9 +29,65 @@ gui::gui(){
 	textures.resize((int)gui::texture_types::SIZE);
 	textures[(int)gui::texture_types::BUTTONS].loadFromFile("./../data/ui_buttons.png");
 
-	buttons.resize(2);
-	buttons[0] = gui::load_button(0);
-	buttons[1] = gui::load_button(1);
+	buttons.resize(7);
+
+	buttons[0] = gui::load_button(1);
+	buttons[0].upd = [](game_info const& info, button* but){
+		if(info.zoom_manager == 3){
+			but->state = button::turn::ON;
+		} else
+			but->state = button::turn::OFF;
+	};
+
+	buttons[1] = gui::load_button(0);
+	buttons[1].upd = [](game_info const& info, button* but){
+		if(info.zoom_manager == -1){
+			but->state = button::turn::ON;
+		} else
+			but->state = button::turn::OFF;
+	};
+
+
+	buttons[2] = gui::load_button(6);
+	buttons[2].upd = [](game_info const& info, button* but){
+		if(info.draw_cells == true){
+			but->state = button::turn::ON;
+		} else
+			but->state = button::turn::OFF;
+	};
+
+	buttons[3] = gui::load_button(2);
+	buttons[3].upd = [](game_info const& info, button* but){
+		if((info.speed == game_info::speed_e::X4) && (info.pause != true)){
+			but->state = button::turn::ON;
+		} else
+			but->state = button::turn::OFF;
+	};
+
+	buttons[4] = gui::load_button(3);
+	buttons[4].upd = [](game_info const& info, button* but){
+		if((info.speed == game_info::speed_e::X2) && (info.pause != true)){
+			but->state = button::turn::ON;
+		} else
+			but->state = button::turn::OFF;
+	};
+
+	buttons[5] = gui::load_button(4);
+	buttons[5].upd = [](game_info const& info, button* but){
+		if((info.speed == game_info::speed_e::X1) && (info.pause != true)){
+			but->state = button::turn::ON;
+		} else
+			but->state = button::turn::OFF;
+	};
+
+	buttons[6] = gui::load_button(5);
+	buttons[6].upd = [](game_info const& info, button* but){
+		if(info.pause == true){
+			but->state = button::turn::ON;
+		} else
+			but->state = button::turn::OFF;
+	};
+
 }
 
 namespace{
@@ -66,7 +119,7 @@ void place_button(game_info *info, button *but, place_position place, to_positio
 	if(to == to_position::DOWN){
 		offset.y = -foffset;
 	} else if(to == to_position::LEFT){
-		offset.x = foffset;
+		offset.x = -foffset;
 	}
 
 	but->sprites[button::turn::OFF].setPosition(start_point + offset);
@@ -76,17 +129,22 @@ void place_button(game_info *info, button *but, place_position place, to_positio
 }
 
 void gui::update(game_info *info){
-	float scale = info->view_size.x / info->Width;
-
 	int i = 0;
-	for(auto &but : buttons){
+	std::for_each(buttons.begin(), buttons.begin() + 3, [&i, &info](auto& but){
+		but.upd(*info, &but);
 		place_button(info, &but, place_position::UP_RIGHT, to_position::DOWN, i++, 100);
-	}
+		});
+
+	i = 0;
+	std::for_each(buttons.begin() + 3, buttons.end(), [&i, &info](auto& but){
+		but.upd(*info, &but);
+		place_button(info, &but, place_position::UP_RIGHT, to_position::LEFT, i++, 100);
+		});
 }
 
 void gui::draw(game_info *info){
 	this->update(info);
 	for(auto &but : buttons){
-		info->window.draw(but.sprites[0]);
+		info->window.draw(but.sprites[but.state]);
 	}
 }
