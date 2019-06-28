@@ -1155,8 +1155,22 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 		this->path_progress -= 1;
 
 		if(this->path.size()){
-			this->path = path_find(info, this->cell_index,
-				this->path.back(), shared_from_this(), player_index);
+			uint32_t recalculated_depth = 6;
+			if(this->path.size() <= recalculated_depth)
+				recalculated_depth = this->path.size() - 1;
+
+			std::list<uint32_t> recalculated_path;
+
+			auto it = this->path.begin();
+			std::advance(it, recalculated_depth);
+
+			recalculated_path = path_find(info, this->cell_index,
+				*it, shared_from_this(), player_index);
+
+			recalculated_path.splice(recalculated_path.end(),
+				this->path, it, this->path.end());
+
+			this->path = recalculated_path;
 		}
 	}
 }
