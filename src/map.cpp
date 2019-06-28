@@ -898,23 +898,29 @@ std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
 	std::vector<uint32_t> src{};
 
 	uint32_t dir_index = cell->indeces[(int)dir];
-	src = open_adjacent_f(info, player_index, dir_index, dir, depth - 1, false, false);
-	std::copy(src.begin(), src.end(), std::back_inserter(dst));
+	if(dir_index != UINT32_MAX){
+		src = open_adjacent_f(info, player_index, dir_index, dir, depth - 1, false, false);
+		std::copy(src.begin(), src.end(), std::back_inserter(dst));
+	}
 
 	if(to_left){
 		cd_t previous_dir = previous(dir);
 		dir_index = cell->indeces[(int)previous_dir];
-		src = open_adjacent_f(info, player_index, dir_index, previous_dir,
-			depth - 1, !to_left, !to_right);
-		std::copy(src.begin(), src.end(), std::back_inserter(dst));
+		if(dir_index != UINT32_MAX){
+			src = open_adjacent_f(info, player_index, dir_index, previous_dir,
+				depth - 1, !to_left, !to_right);
+			std::copy(src.begin(), src.end(), std::back_inserter(dst));
+		}
 	}
 
 	if(to_right){
 		cd_t next_dir = next(dir);
 		dir_index = cell->indeces[(int)next_dir];
-		src = open_adjacent_f(info, player_index, dir_index, next_dir,
-			depth - 1, !to_left, !to_right);
-		std::copy(src.begin(), src.end(), std::back_inserter(dst));
+		if(dir_index != UINT32_MAX){
+			src = open_adjacent_f(info, player_index, dir_index, next_dir,
+				depth - 1, !to_left, !to_right);
+			std::copy(src.begin(), src.end(), std::back_inserter(dst));
+		}
 	}
 
 	return dst;
@@ -932,10 +938,13 @@ std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
 
 	for(cd_t dir = cd_t::BEGIN; dir < cd_t::END; dir = (cd_t)((int)dir + 1)){
 		uint32_t dir_index = cell->indeces[(int)dir];
-		std::vector<uint32_t> src =
-			open_adjacent_f(info, player_index, dir_index, dir, depth - 1, false, true);
 
-		std::copy(src.begin(), src.end(), std::back_inserter(dst));
+		if(dir_index != UINT32_MAX){
+			std::vector<uint32_t> src =
+				open_adjacent_f(info, player_index, dir_index, dir, depth - 1, false, true);
+
+			std::copy(src.begin(), src.end(), std::back_inserter(dst));
+		}
 	}
 
 	return dst;
