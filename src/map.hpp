@@ -95,7 +95,7 @@ public:
 	std::vector<bool> player_visible;
 };
 
-struct unit{
+struct unit : std::enable_shared_from_this<unit>{
 	enum class unit_type{
 		CARAVAN = 0,
 
@@ -110,6 +110,8 @@ struct unit{
 	uint32_t vision_range = 0;
 	std::vector<uint32_t> vision_indeces{};
 
+	float speed[(int)terrain_en::END];
+	float speed_mod = 0;
 	std::list<uint32_t> path;
 	float path_progress = 0;
 
@@ -121,6 +123,10 @@ struct unit{
 	static std::shared_ptr<unit> create_caravan(weight_level_type weight, uint32_t cell_index);
 
 	void open_vision(game_info *info, uint32_t player_index);
+	void update(game_info *info, uint32_t player_index, float time);
+
+private:
+	void unit_update_move(game_info *info, uint32_t player_index, float time);
 };
 
 struct player{
@@ -158,6 +164,9 @@ struct game_info{
 	int zoom_manager;
 
 	game_info();
+
+	cell& get_cell(uint32_t index);
+	void update(float time);
 };
 
 std::vector<cell> generate_world(uint32_t size);
@@ -171,8 +180,8 @@ void player_respawn(game_info *info, uint32_t player_index);
 
 sf::Vector2f mouse_on_map(game_info *info);
 
-std::list<uint32_t> path_find(game_info *info,
-	uint32_t start_point, uint32_t finish_point);
+std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
+	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index);
 
 uint32_t get_cell_index_under_mouse(game_info *info);
 void draw_path(game_info *info, std::list<uint32_t> path, float progress);

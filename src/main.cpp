@@ -25,6 +25,8 @@ int main(){
 		time = clock.getElapsedTime().asMilliseconds();
 		clock.restart();
 
+		info.update(time);
+
 		info.window.setView(info.view);
 		draw_map(&info, time, player_index);
 		gui::instance().draw(&info);

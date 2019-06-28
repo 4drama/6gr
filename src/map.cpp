@@ -455,21 +455,31 @@ namespace{
 
 struct path_cell{
 	std::list<uint32_t> path{};
-	float weight = 10000000;
+	float weight = INFINITY;
 };
 
-float get_path_weight_f(std::vector<cell> &map, uint32_t target_cell_index){
-	return 1;
+float get_path_weight_f(std::vector<cell> &map, uint32_t target_cell_index,
+	std::shared_ptr<unit> unit, uint32_t player_index){
+	terrain_en ter_type = map[target_cell_index].ter.type;
+	if(unit->speed[(int)ter_type] == 0){
+		return INFINITY;
+	}
+	if(map[target_cell_index].player_visible[player_index] == true)
+		return 1 / unit->speed[(int)ter_type];
+	else
+		return 1.5 / unit->speed[(int)terrain_en::PLAIN];
 }
 
 void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
-	std::list<uint32_t> &index_queue, uint32_t index){
+	std::list<uint32_t> &index_queue, uint32_t index, std::shared_ptr<unit> unit,
+	uint32_t player_index){
 
 	for(auto &next_index : map[index].indeces){
 		if(next_index == UINT32_MAX)
 			continue;
 
-		float weight = map_path[index].weight + get_path_weight_f(map, next_index);
+		float weight = map_path[index].weight + get_path_weight_f(map, next_index,
+			unit, player_index);
 		if(map_path[next_index].weight > weight){
 			std::list<uint32_t> path = map_path[index].path;
 			path.emplace_back(next_index);
@@ -481,10 +491,18 @@ void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
 	}
 }
 
+bool infinity_check(game_info *info, std::shared_ptr<unit> unit, uint32_t point){
+	terrain_en ter_type = info->get_cell(point).ter.type;
+	if(unit->speed[(int)ter_type] == 0)
+		return true;
+	else
+		return false;
 }
 
-std::list<uint32_t> path_find(game_info *info,
-	uint32_t start_point, uint32_t finish_point){
+}
+
+std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
+	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index){
 
 	std::vector<path_cell> map_path{};
 	map_path.resize(info->map.size());
@@ -494,14 +512,20 @@ std::list<uint32_t> path_find(game_info *info,
 	map_path[start_point].weight = 0;
 	map_path[start_point].path.emplace_back(start_point);
 
+	if(infinity_check(info, unit, finish_point))
+		return map_path[start_point].path;
+
+
 	uint32_t index;
 	do{
-		 index = index_queue.front();
-		 index_queue.pop_front();
+		index = index_queue.front();
+		index_queue.pop_front();
 
-		 fill_queue_f(info->map, map_path, index_queue, index);
-		 if(index == finish_point)
+		fill_queue_f(info->map, map_path, index_queue, index, unit, player_index);
+		if(index == finish_point){
+			map_path[index].path.pop_front();
 		 	return map_path[index].path;
+		}
 	} while(!index_queue.empty());
 }
 
@@ -752,7 +776,8 @@ void draw_map(game_info *info, float time, uint32_t player_index){
 		for(auto &unit : player.units){
 			for(auto &sprite : unit->sprites){
 				sprite.setPosition(
-					perspective_f(info->map[unit->cell_index].pos, &info->view));
+					perspective_f(info->map[unit->cell_index].pos + sf::Vector2f{2, -8},
+						&info->view));
 				object_sprites.emplace_back(sprite);
 			}
 		}
@@ -925,7 +950,6 @@ void unit::open_vision(game_info *info, uint32_t player_index){
 
 void player_respawn(game_info *info, uint32_t player_index){
 	uint32_t spawn_cell_index = 0;
-	open_adjacent_f(info, player_index, spawn_cell_index, 6);
 	info->view.setCenter(info->map[spawn_cell_index].pos);
 
 	std::shared_ptr<unit> caravan =
@@ -951,7 +975,7 @@ sf::Sprite create_sprite_f(sf::Texture *texture,
 
 	frame.setTexture(*texture);
 	frame.setTextureRect(rectangle);
-	frame.setOrigin(width / 2, height / 2);
+	frame.setOrigin(width / 2, height);
 	frame.setScale (0.2, -0.2);
 	return frame;
 }
@@ -966,32 +990,42 @@ std::shared_ptr<unit> unit::create_caravan(unit::weight_level_type weight, uint3
 		create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
 		60, 60, 0, 0));
 
+
+
 	switch(weight){
 		case unit::weight_level_type::LIGHT :
 			result.sprites.emplace_back(
 				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
 				60, 60, 2, 0));
+			result.speed_mod = (float)2 / 10000;
 		break;
 		case unit::weight_level_type::LOADED :
-		result.sprites.emplace_back(
-			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-			60, 60, 1, 0));
-		result.sprites.emplace_back(
-			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-			60, 60, 0, 1));
+			result.sprites.emplace_back(
+				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+				60, 60, 1, 0));
+			result.sprites.emplace_back(
+				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+				60, 60, 0, 1));
+			result.speed_mod = (float)1 / 10000;
 		break;
 		case unit::weight_level_type::OVERLOADED :
-		result.sprites.emplace_back(
-			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-			60, 60, 1, 0));
-		result.sprites.emplace_back(
-			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-			60, 60, 0, 1));
-		result.sprites.emplace_back(
-			create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-			60, 60, 1, 1));
+			result.sprites.emplace_back(
+				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+				60, 60, 1, 0));
+			result.sprites.emplace_back(
+				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+				60, 60, 0, 1));
+			result.sprites.emplace_back(
+				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
+				60, 60, 1, 1));
+			result.speed_mod = (float)0.5 / 10000;
 		break;
 	}
+
+	result.speed[(int)terrain_en::RIVER] = 0;
+	result.speed[(int)terrain_en::MOUNTAIN] = 0.5;
+	result.speed[(int)terrain_en::PLAIN] = 2;
+	result.speed[(int)terrain_en::PALM] = 2;
 
 	return std::make_shared<unit>(result);
 }
@@ -1088,7 +1122,52 @@ void units_draw_paths(game_info *info, uint32_t player_index){
 		if((curr_unit.first == player_index) && (curr_unit.second.use_count() != 0)){
 			std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
 
-			draw_path(info, unit_ptr->path, unit_ptr->path_progress);
+			auto path = unit_ptr->path;
+			path.push_front(unit_ptr->cell_index);
+			draw_path(info, path, unit_ptr->path_progress);
+		}
+	}
+}
+
+cell& game_info::get_cell(uint32_t index){
+	return this->map[index];
+}
+
+void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
+	if(!this->path.size())
+		return;
+
+	terrain_en terr_type = info->get_cell(this->path.front()).ter.type;
+	this->path_progress += time * this->speed_mod * this->speed[(int)terr_type];
+
+	if(this->path_progress > 1){
+		this->cell_index = this->path.front();
+		this->path.pop_front();
+		this->path_progress -= 1;
+
+		if(this->path.size()){
+			this->path = path_find(info, this->cell_index,
+				this->path.back(), shared_from_this(), player_index);
+		}
+	}
+}
+
+
+void unit::update(game_info *info, uint32_t player_index, float time){
+
+	this->unit_update_move(info, player_index, time);
+}
+
+void game_info::update(float time){
+	if(this->pause == true)
+		return ;
+
+	float time_mod[3] = {1, 2, 4};
+	time *= time_mod[this->speed];
+
+	for(uint32_t player_index = 0 ; player_index < this->players.size(); ++player_index){
+		for(auto & curr_unit : this->players[player_index].units){
+			curr_unit->update(this, player_index, time);
 		}
 	}
 }
