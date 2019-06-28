@@ -31,8 +31,7 @@ int main(){
 
 	//	show_cursor_point(&info);
 
-		if(!info.path.empty())
-			draw_path(&info, info.path, 0);	//TO DO DELETE
+		units_draw_paths(&info, player_index);
 
 		info.window.display();
 	}

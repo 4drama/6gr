@@ -716,22 +716,12 @@ void draw_cell_f(game_info *info, sf::Vertex *transform_shape){
 	info->window.draw(transform_shape, 7, sf::LineStrip);
 }
 
-void set_selected_cell(game_info *info, uint32_t cell_index, uint32_t player_index){
-	player &player = info->players[player_index];
-	if(player.memory_cell == true){
-		player.sellected_units.clear();
-
-		player.sellected_cell = cell_index;
-		player.memory_cell = false;
-	}
-}
-
 void draw_selected_cell(game_info *info, uint32_t player_index){
 	player &player = info->players[player_index];
 
-	if(player.sellected_cell != UINT32_MAX){
+	if(player.selected_cell != UINT32_MAX){
 		sf::Vertex transform_shape[7];
-		create_transform_shape_f(info, info->map[player.sellected_cell].pos,
+		create_transform_shape_f(info, info->map[player.selected_cell].pos,
 			transform_shape, sf::Color(88, 244, 122));
 
 		info->window.draw(transform_shape, 7, sf::LineStrip);
@@ -774,7 +764,6 @@ void draw_map(game_info *info, float time, uint32_t player_index){
 			sf::Vertex transform_shape[7];
 			if(is_inside_f(info, &info->map[i], mouse_pos, transform_shape)){
 				draw_cell_f(info, transform_shape);
-				set_selected_cell(info, i, player_index);
 			}
 		}
 	}
@@ -924,9 +913,6 @@ std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
 		std::copy(src.begin(), src.end(), std::back_inserter(dst));
 	}
 
-//	std::sort(dst.begin(), dst.end());
-//	std::unique(dst.begin(), dst.end());
-
 	return dst;
 }
 
@@ -1024,11 +1010,10 @@ sf::Vector2f mouse_on_map(game_info *info){
 	return sf::Vector2f(pos.x / rate, pos.y / rate);
 }
 
-void select_cell(game_info *info, uint32_t player_index){
-	info->players[player_index].memory_cell = true;
-}
-
 void draw_path(game_info *info, std::list<uint32_t> path, float progress){
+	if(path.size() == 0)
+		return ;
+
 	float scale = info->view_size.x / info->Width;
 
 	sf::Vector2f first_point = perspective_f(info->map[path.front()].pos, &info->view);
@@ -1076,4 +1061,34 @@ uint32_t get_cell_index_under_mouse(game_info *info){
 		}
 	}
 	return res;
+}
+
+std::list<player::selected_unit_type> units_on_cells(
+	game_info *info, std::list<uint32_t> players_indeces, std::list<uint32_t> cells){
+
+	std::list<player::selected_unit_type> result{};
+
+	for(auto &player_index : players_indeces){
+		for(auto& unit_ptr: info->players[player_index].units){
+			for(auto& cell_index : cells){
+				if(cell_index == unit_ptr->cell_index){
+					result.emplace_back(player_index, unit_ptr);
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+void units_draw_paths(game_info *info, uint32_t player_index){
+	auto &selected_units = info->players[player_index].selected_units;
+
+	for(auto &curr_unit : selected_units){
+		if((curr_unit.first == player_index) && (curr_unit.second.use_count() != 0)){
+			std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
+
+			draw_path(info, unit_ptr->path, unit_ptr->path_progress);
+		}
+	}
 }

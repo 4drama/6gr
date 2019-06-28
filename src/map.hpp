@@ -110,6 +110,8 @@ struct unit{
 	uint32_t vision_range = 0;
 	std::vector<uint32_t> vision_indeces{};
 
+	std::list<uint32_t> path;
+	float path_progress = 0;
 
 	enum class weight_level_type{
 		LIGHT,
@@ -122,14 +124,14 @@ struct unit{
 };
 
 struct player{
-	using sellected_unit_type = std::pair< uint32_t, std::weak_ptr<unit> >;
+	using player_index_type = uint32_t;
+	using selected_unit_type = std::pair< player_index_type, std::weak_ptr<unit> >;
 	std::string name = "default";
 
 	std::vector< std::shared_ptr<unit> > units;
 
-	bool memory_cell = false;
-	uint32_t sellected_cell = UINT32_MAX;
-	std::vector< sellected_unit_type > sellected_units{};
+	uint32_t selected_cell = UINT32_MAX;
+	std::vector< selected_unit_type > selected_units{};
 };
 
 struct game_info{
@@ -155,8 +157,6 @@ struct game_info{
 	bool pause;
 	int zoom_manager;
 
-	std::list<uint32_t> path; //TO DO DELETE
-
 	game_info();
 };
 
@@ -171,12 +171,15 @@ void player_respawn(game_info *info, uint32_t player_index);
 
 sf::Vector2f mouse_on_map(game_info *info);
 
-void select_cell(game_info *info, uint32_t player_index);
-
 std::list<uint32_t> path_find(game_info *info,
 	uint32_t start_point, uint32_t finish_point);
 
 uint32_t get_cell_index_under_mouse(game_info *info);
 void draw_path(game_info *info, std::list<uint32_t> path, float progress);
+
+std::list<player::selected_unit_type> units_on_cells(
+	game_info *info, std::list<uint32_t> players_indeces, std::list<uint32_t> cells);
+
+void units_draw_paths(game_info *info, uint32_t players_index);
 
 #endif
