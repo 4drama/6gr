@@ -1149,20 +1149,24 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 	terrain_en terr_type = info->get_cell(this->path.front()).ter.type;
 	this->path_progress += time * this->speed_mod * this->speed[(int)terr_type];
 
+	if(this->cell_index == this->path.back()){
+		this->path.clear();
+	}
+
 	if(this->path_progress > 1){
 		this->cell_index = this->path.front();
 		this->path.pop_front();
 		this->path_progress -= 1;
 
-		if(this->path.size()){
+		if(!this->path.empty()){
 			uint32_t recalculated_depth = 6;
-			if(this->path.size() <= recalculated_depth)
-				recalculated_depth = this->path.size() - 1;
-
 			std::list<uint32_t> recalculated_path;
 
 			auto it = this->path.begin();
-			std::advance(it, recalculated_depth);
+			if(this->path.size() <= recalculated_depth)
+				it = --this->path.end();
+			else
+				std::advance(it, recalculated_depth);
 
 			recalculated_path = path_find(info, this->cell_index,
 				*it, shared_from_this(), player_index);
