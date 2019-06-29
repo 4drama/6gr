@@ -472,21 +472,29 @@ float get_path_weight_f(std::vector<cell> &map, uint32_t target_cell_index,
 
 void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
 	std::list<uint32_t> &index_queue, uint32_t index, std::shared_ptr<unit> unit,
-	uint32_t player_index){
+	uint32_t player_index, bool even){
 
-	for(auto &next_index : map[index].indeces){
-		if(next_index == UINT32_MAX)
+	using cd = cardinal_directions_t;
+
+	int start = even ? (int)cd::BEGIN : (int)cd::LAST;
+	int finish = even ? (int)cd::END : (int)cd::BEGIN - 1;
+	auto step_funct = even ? [](int &i){ ++i;} : [](int &i){ --i;};
+	auto cmp = even ? [](int l, int r){ return l < r;} : [](int l, int r){ return l > r;};
+
+	for(int dir = start; cmp(dir, finish); step_funct(dir)){
+		uint32_t dir_index = map[index].indeces[dir];
+		if(dir_index == UINT32_MAX)
 			continue;
 
-		float weight = map_path[index].weight + get_path_weight_f(map, next_index,
+		float weight = map_path[index].weight + get_path_weight_f(map, dir_index,
 			unit, player_index);
-		if(map_path[next_index].weight > weight){
+		if(map_path[dir_index].weight > weight){
 			std::list<uint32_t> path = map_path[index].path;
-			path.emplace_back(next_index);
-			map_path[next_index].path = path;
-			map_path[next_index].weight = weight;
+			path.emplace_back(dir_index);
+			map_path[dir_index].path = path;
+			map_path[dir_index].weight = weight;
 
-			index_queue.push_back(next_index);
+			index_queue.push_back(dir_index);
 		}
 	}
 }
@@ -517,11 +525,13 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 
 
 	uint32_t index;
+	bool even = true;
 	do{
 		index = index_queue.front();
 		index_queue.pop_front();
 
-		fill_queue_f(info->map, map_path, index_queue, index, unit, player_index);
+		fill_queue_f(info->map, map_path, index_queue, index, unit, player_index, even);
+		even = !even;
 		if(index == finish_point){
 			map_path[index].path.pop_front();
 		 	return map_path[index].path;
