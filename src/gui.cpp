@@ -162,6 +162,14 @@ void gui::update(game_info *info){
 		});
 }
 
+namespace{
+
+void labels_draw(game_info *info){
+	
+}
+
+}
+
 void gui::draw(game_info *info){
 	this->update(info);
 	for(auto &but : buttons){

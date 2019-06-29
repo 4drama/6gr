@@ -420,7 +420,7 @@ void cell::set_side_size(float side_size_){
 	cell::shape[5] = sf::Vertex(sf::Vector2f( 0, (-side_size / 2) + (-side_size * short_rate)) );
 	cell::shape[6] = sf::Vertex(sf::Vector2f( -side_size * long_rate, -side_size / 2 ) );
 }
-
+/*
 void draw_path(sf::RenderWindow *window, cell *curr_cell, std::vector<cell> *map){
 	using cd_t = cardinal_directions_t;
 	for(cd_t dir = cd_t::BEGIN; dir < cd_t::EAST ; dir = next(dir)){
@@ -449,7 +449,7 @@ void draw_path(sf::RenderWindow *window, cell *curr_cell, std::vector<cell> *map
 		}
 	}
 }
-
+*/
 
 namespace{
 
@@ -753,12 +753,15 @@ void draw_cell_f(game_info *info, sf::Vertex *transform_shape){
 void draw_selected_cell(game_info *info, uint32_t player_index){
 	player &player = info->players[player_index];
 
-	if(player.selected_cell != UINT32_MAX){
-		sf::Vertex transform_shape[7];
-		create_transform_shape_f(info, info->map[player.selected_cell].pos,
-			transform_shape, sf::Color(88, 244, 122));
+	for(auto &unit : player.selected_units){
+		auto unit_ptr = unit.second.lock();
+		if(on_screen_f(&info->map[unit_ptr->cell_index], &info->view)){
+			sf::Vertex transform_shape[7];
+			create_transform_shape_f(info, info->map[unit_ptr->cell_index].pos,
+				transform_shape, sf::Color(88, 244, 122));
 
-		info->window.draw(transform_shape, 7, sf::LineStrip);
+			info->window.draw(transform_shape, 7, sf::LineStrip);
+		}
 	}
 }
 
@@ -784,11 +787,12 @@ void draw_map(game_info *info, float time, uint32_t player_index){
 
 	for(auto &player : info->players){
 		for(auto &unit : player.units){
-			for(auto &sprite : unit->sprites){
-				sprite.setPosition(
-					perspective_f(info->map[unit->cell_index].pos + sf::Vector2f{2, -8},
-						&info->view));
-				object_sprites.emplace_back(sprite);
+			if(on_screen_f(&info->map[unit->cell_index], &info->view)){
+				for(auto &sprite : unit->sprites){
+					sprite.setPosition( perspective_f(info->map[unit->cell_index].pos
+						+ sf::Vector2f{2, -8}, &info->view));
+					object_sprites.emplace_back(sprite);
+				}
 			}
 		}
 	}
@@ -1087,14 +1091,17 @@ void draw_path(game_info *info, std::list<uint32_t> path, float progress){
 	circle.setOrigin(circle.getRadius(), circle.getRadius());
 
 	while(!path.empty()){
-		second_point = perspective_f(info->map[path.front()].pos, &info->view);
+		cell &cell = info->map[path.front()];
+		second_point = perspective_f(cell.pos, &info->view);
 		path.pop_front();
 
 		line[1] = sf::Vertex(second_point);
 		circle.setPosition(second_point);
 
-		info->window.draw(line, 2, sf::Lines);
-		info->window.draw(circle);
+		if(on_screen_f(&cell, &info->view)){
+			info->window.draw(line, 2, sf::Lines);
+			info->window.draw(circle);
+		}
 
 		line[0] = line[1];
 	}
