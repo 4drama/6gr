@@ -539,9 +539,7 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 	} while(!index_queue.empty());
 }
 
-namespace{
-
-sf::Vector2f perspective_f(sf::Vector2f position, sf::View *view){
+sf::Vector2f perspective(sf::Vector2f position, sf::View *view){
 	float depth = 1000;
 	float transform_rate = (depth - position.y) / depth;
 	return sf::Vector2f(
@@ -550,21 +548,23 @@ sf::Vector2f perspective_f(sf::Vector2f position, sf::View *view){
 		* transform_rate + view->getCenter().y - depth / 3);
 }
 
-sf::Vertex perspective_vertex_f(sf::Vertex shape_vertex,
-	sf::Vector2f position, sf::View *view){
-
-	float x_position = shape_vertex.position.x + position.x;
-	float y_position = shape_vertex.position.y + position.y;
-	return sf::Vertex(perspective_f(sf::Vector2f{x_position, y_position}, view));
-}
-
-bool on_screen_f(cell *cell, sf::View *view){
+bool on_screen(cell *cell, sf::View *view){
 	int cull = view->getSize().x;
 	if((cell->pos.x > cull) || (cell->pos.x < -cull))
 		return false;
 	if((cell->pos.y > cull) || (cell->pos.y < -cull))
 		return false;
 	return true;
+}
+
+namespace{
+
+sf::Vertex perspective_vertex_f(sf::Vertex shape_vertex,
+	sf::Vector2f position, sf::View *view){
+
+	float x_position = shape_vertex.position.x + position.x;
+	float y_position = shape_vertex.position.y + position.y;
+	return sf::Vertex(perspective(sf::Vector2f{x_position, y_position}, view));
 }
 
 sf::Color get_color_in_view(terrain_en terr){
@@ -649,7 +649,7 @@ void create_transform_shape_f(game_info *info, sf::Vector2f pos,
 void draw_scheme_map_f(game_info *info){
 	for(auto &cell : info->map){
 		if(any_of_player_f(&info->visible_players_indeces, &cell.player_visible)
-			&& on_screen_f(&cell, &info->view)){
+			&& on_screen(&cell, &info->view)){
 
 			sf::Vertex transform_shape[7];
 			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::Black);
@@ -671,7 +671,7 @@ void draw_scheme_map_f(game_info *info){
 				if(info->draw_cells)
 					info->window.draw(transform_shape, 7, sf::LineStrip);
 				info->window.draw(get_sprite_out_of_view(cell.ter.type,
-					perspective_f(cell.pos, &info->view)));
+					perspective(cell.pos, &info->view)));
 			}
 		}
 	}
@@ -683,7 +683,7 @@ void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces,
 	for(auto cell_index : *vision_indeces){
 		cell &cell = info->map[cell_index];
 		if(any_of_player_f(&info->visible_players_indeces, &cell.player_visible)
-			&& on_screen_f(&cell, &info->view)){
+			&& on_screen(&cell, &info->view)){
 
 			sf::Vertex transform_shape[7];
 			create_transform_shape_f(info, cell.pos, transform_shape, sf::Color::Black);
@@ -706,7 +706,7 @@ void draw_vision_map_f(game_info *info, std::vector<uint32_t> *vision_indeces,
 					info->window.draw(transform_shape, 7, sf::LineStrip);
 				for(auto &obj : cell.ter.objects){
 					sf::Sprite sprite = obj.update_sprite(time);
-					sprite.setPosition(perspective_f(cell.pos + obj.pos, &info->view));
+					sprite.setPosition(perspective(cell.pos + obj.pos, &info->view));
 					object_sprites->emplace_back(sprite);
 				}
 			}
@@ -755,7 +755,7 @@ void draw_selected_cell(game_info *info, uint32_t player_index){
 
 	for(auto &unit : player.selected_units){
 		auto unit_ptr = unit.second.lock();
-		if(on_screen_f(&info->map[unit_ptr->cell_index], &info->view)){
+		if(on_screen(&info->map[unit_ptr->cell_index], &info->view)){
 			sf::Vertex transform_shape[7];
 			create_transform_shape_f(info, info->map[unit_ptr->cell_index].pos,
 				transform_shape, sf::Color(88, 244, 122));
@@ -787,9 +787,9 @@ void draw_map(game_info *info, float time, uint32_t player_index){
 
 	for(auto &player : info->players){
 		for(auto &unit : player.units){
-			if(on_screen_f(&info->map[unit->cell_index], &info->view)){
+			if(on_screen(&info->map[unit->cell_index], &info->view)){
 				for(auto &sprite : unit->sprites){
-					sprite.setPosition( perspective_f(info->map[unit->cell_index].pos
+					sprite.setPosition( perspective(info->map[unit->cell_index].pos
 						+ sf::Vector2f{2, -8}, &info->view));
 					object_sprites.emplace_back(sprite);
 				}
@@ -799,7 +799,7 @@ void draw_map(game_info *info, float time, uint32_t player_index){
 
 	sf::Vector2f mouse_pos = mouse_on_map(info);
 	for(uint32_t i = 0; i < info->map.size(); ++i){
-		if(on_screen_f(&info->map[i], &info->view)){
+		if(on_screen(&info->map[i], &info->view)){
 			sf::Vertex transform_shape[7];
 			if(is_inside_f(info, &info->map[i], mouse_pos, transform_shape)){
 				draw_cell_f(info, transform_shape);
@@ -1073,9 +1073,9 @@ void draw_path(game_info *info, std::list<uint32_t> path, float progress){
 
 	float scale = info->view_size.x / info->Width;
 
-	sf::Vector2f first_point = perspective_f(info->map[path.front()].pos, &info->view);
+	sf::Vector2f first_point = perspective(info->map[path.front()].pos, &info->view);
 	path.pop_front();
-	sf::Vector2f second_point = perspective_f(info->map[path.front()].pos, &info->view);
+	sf::Vector2f second_point = perspective(info->map[path.front()].pos, &info->view);
 
 	sf::Vector2f dif = second_point - first_point;
 	dif *= progress;
@@ -1092,13 +1092,13 @@ void draw_path(game_info *info, std::list<uint32_t> path, float progress){
 
 	while(!path.empty()){
 		cell &cell = info->map[path.front()];
-		second_point = perspective_f(cell.pos, &info->view);
+		second_point = perspective(cell.pos, &info->view);
 		path.pop_front();
 
 		line[1] = sf::Vertex(second_point);
 		circle.setPosition(second_point);
 
-		if(on_screen_f(&cell, &info->view)){
+		if(on_screen(&cell, &info->view)){
 			info->window.draw(line, 2, sf::Lines);
 			info->window.draw(circle);
 		}
@@ -1112,7 +1112,7 @@ uint32_t get_cell_index_under_mouse(game_info *info){
 
 	uint32_t res = UINT32_MAX;
 	for(uint32_t i = 0; i < info->map.size(); ++i){
-		if(on_screen_f(&info->map[i], &info->view)){
+		if(on_screen(&info->map[i], &info->view)){
 			sf::Vertex transform_shape[7];
 			if(is_inside_f(info, &info->map[i], mouse_pos, transform_shape)){
 				res = i;
@@ -1213,5 +1213,41 @@ void game_info::update(float time){
 		for(auto & curr_unit : this->players[player_index].units){
 			curr_unit->update(this, player_index, time);
 		}
+	}
+}
+
+std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_indeces){
+	static std::vector<bool> map{};
+	map.assign(info->map.size(), false);
+
+	for(auto &curr_player_index : players_indeces){
+		for(auto &unit : info->players[curr_player_index].units){
+			for(auto &vision_index : unit->vision_indeces){
+				map[vision_index] = true;
+			}
+		}
+	}
+	return &map;
+}
+
+player_info::player_info(game_info *info, uint32_t player_) : player(player_){
+	this->control_players.emplace_back(player);
+	update(info);
+}
+
+void player_info::update(game_info *info){
+	this->relationship.assign(info->players.size(),
+		player_info::relationship_type::NEUTRAL);
+
+	for(auto &player_index : this->control_players){
+		this->relationship[player_index] = player_info::relationship_type::CONTROL;
+	}
+
+	for(auto &player_index : this->alliance_players){
+		this->relationship[player_index] = player_info::relationship_type::ALLIANCE;
+	}
+
+	for(auto &player_index : this->enemy_players){
+		this->relationship[player_index] = player_info::relationship_type::ENEMY;
 	}
 }

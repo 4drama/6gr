@@ -16,6 +16,8 @@ int main(){
 	float time;
 
 	uint32_t player_index = add_player(&info, "Player 1", true);
+	player_info player_info(&info, player_index);
+
 	player_respawn(&info, player_index);
 
 	while(info.window.isOpen()){
@@ -29,7 +31,7 @@ int main(){
 
 		info.window.setView(info.view);
 		draw_map(&info, time, player_index);
-		gui::instance().draw(&info);
+		gui::instance().draw(&info, &player_info);
 
 	//	show_cursor_point(&info);
 

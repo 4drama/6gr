@@ -29,7 +29,7 @@ public:
 	static gui& instance();
 
 	void update(game_info *info);
-	void draw(game_info *info);
+	void draw(game_info *info, player_info* player_info);
 	bool gui_interact(game_info *info);
 
 private:

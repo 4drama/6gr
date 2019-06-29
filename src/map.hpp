@@ -169,6 +169,26 @@ struct game_info{
 	void update(float time);
 };
 
+struct player_info{
+	uint32_t player;
+
+	std::list<uint32_t> control_players;
+	std::list<uint32_t> alliance_players;
+	std::list<uint32_t> enemy_players;
+
+	enum relationship_type{
+		NEUTRAL = 0,
+		CONTROL = 1,
+		ALLIANCE = 2,
+		ENEMY = 3
+	};
+
+	std::vector<relationship_type> relationship;
+
+	player_info(game_info *info, uint32_t player_);
+	void update(game_info *info);
+};
+
 std::vector<cell> generate_world(uint32_t size);
 void generate_level(std::vector<cell> *map);
 void draw_map(game_info *info, float time, uint32_t player_index);
@@ -190,5 +210,10 @@ std::list<player::selected_unit_type> units_on_cells(
 	game_info *info, std::list<uint32_t> players_indeces, std::list<uint32_t> cells);
 
 void units_draw_paths(game_info *info, uint32_t players_index);
+
+std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_indeces);
+
+sf::Vector2f perspective(sf::Vector2f position, sf::View *view);
+bool on_screen(cell *cell, sf::View *view);
 
 #endif

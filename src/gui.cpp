@@ -164,17 +164,79 @@ void gui::update(game_info *info){
 
 namespace{
 
-void labels_draw(game_info *info){
-	
+sf::Color rgb(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha = 255){
+	return sf::Color(red, green, blue, alpha);
 }
+
+void draw_label(game_info *info, player_info::relationship_type relationship,
+	uint32_t cell_index, uint32_t level, float scale, bool is_select){
+
+	float width = 25.0 * scale;
+	float height = 13.0 * scale;
+
+	sf::Vector2f offset{(float)-20 * scale, (float)48 * scale};
+
+	sf::RectangleShape label(sf::Vector2f(width, height));
+	label.setOrigin(width / 2, height / 2);
+	label.setPosition(perspective(info->map[cell_index].pos + offset, &info->view));
+	label.setOutlineThickness(1 * scale);
+
+	switch (relationship) {
+		case player_info::relationship_type::NEUTRAL :
+			label.setFillColor(is_select ? rgb(70, 69, 69) : rgb(161, 161, 161));
+			label.setOutlineColor(rgb(29, 29, 29));
+		break;
+		case player_info::relationship_type::CONTROL :
+			label.setFillColor(is_select ? rgb(25, 98, 39) : rgb(45, 64, 49));
+			label.setOutlineColor(rgb(9, 20, 11));
+		break;
+		case player_info::relationship_type::ALLIANCE :
+			label.setFillColor(is_select ? rgb(16, 48, 96) : rgb(76, 97, 129));
+			label.setOutlineColor(rgb(15, 20, 27));
+		break;
+		case player_info::relationship_type::ENEMY :
+			label.setFillColor(is_select ? rgb(115, 26, 26) : rgb(139, 73, 73));
+			label.setOutlineColor(rgb(27, 14, 14));
+		break;
+	}
+
+	info->window.draw(label);
+}
+
+void labels_draw(game_info *info, player_info* player_info){
+	float scale = info->view_size.x / info->Width;
+	std::vector<bool> *vision_map = get_vision_map(info, player_info->control_players);
+
+	for(uint32_t player_index = 0; player_index < info->players.size(); ++player_index){
+		for(auto &curr_unit_ptr : info->players[player_index].units){
+			if(vision_map->at(curr_unit_ptr->cell_index)
+				&& (on_screen(&info->map[curr_unit_ptr->cell_index], &info->view))){
+
+				bool is_select = false;
+				for(auto &unit : info->players[player_info->player].selected_units){
+					auto sel_unit = unit.second.lock();
+					if(curr_unit_ptr == sel_unit){
+						is_select = true;
+					}
+				}
+
+				draw_label(info, player_info->relationship[player_index],
+					curr_unit_ptr->cell_index, 0, scale, is_select);
+			}
+		}
+	}
 
 }
 
-void gui::draw(game_info *info){
+}
+
+void gui::draw(game_info *info, player_info* player_info){
 	this->update(info);
 	for(auto &but : buttons){
 		info->window.draw(but.sprites[but.state]);
 	}
+
+	labels_draw(info, player_info);
 }
 
 namespace{
