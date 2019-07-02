@@ -525,7 +525,7 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 
 
 	uint32_t index;
-	bool even = true;
+	bool even = std::rand() % 1;
 	do{
 		index = index_queue.front();
 		index_queue.pop_front();
@@ -1176,7 +1176,9 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 		this->path_progress -= 1;
 
 		if(!this->path.empty()){
-			uint32_t recalculated_depth = 6;
+			this->open_vision(info, player_index);
+
+			uint32_t recalculated_depth = 8;
 			std::list<uint32_t> recalculated_path;
 
 			auto it = this->path.begin();
