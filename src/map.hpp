@@ -3,6 +3,19 @@
 
 #include <SFML/Graphics.hpp>
 
+enum class cardinal_directions_t;
+enum class terrain_en;
+
+struct object;
+struct terrain;
+class cell;
+struct unit : std::enable_shared_from_this<unit>;
+struct player;
+struct player_info;
+struct game_info;
+
+#include "client.hpp"
+
 #include <vector>
 #include <cstdint>
 #include <utility>
@@ -141,27 +154,16 @@ struct player{
 };
 
 struct game_info{
-	int Width, Height;
-
-	sf::RenderWindow window;
-	sf::View view;
-
-	sf::Vector2f view_size;
-	float display_rate;
 
 	std::vector<cell> map;
-
 	std::vector<player> players;
-	std::vector<uint32_t> visible_players_indeces;
 
-	bool draw_cells;
 	enum speed_e{
 		X1,
 		X2,
 		X4
 	} speed;
 	bool pause;
-	int zoom_manager;
 
 	game_info();
 
@@ -212,8 +214,5 @@ std::list<player::selected_unit_type> units_on_cells(
 void units_draw_paths(game_info *info, uint32_t players_index);
 
 std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_indeces);
-
-sf::Vector2f perspective(sf::Vector2f position, sf::View *view);
-bool on_screen(cell *cell, sf::View *view);
 
 #endif

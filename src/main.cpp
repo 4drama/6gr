@@ -11,12 +11,15 @@
 #include <iostream>
 
 int main(){
-	game_info info{};
 	sf::Clock clock;
 	float time;
 
+	game_info info{};
 	uint32_t player_index = add_player(&info, "Player 1", true);
-	player_info player_info(&info, player_index);
+
+	client client1(&info, 1400, 900, player_index);
+
+//	player_info player_info(&info, player_index);
 
 	player_respawn(&info, player_index);
 

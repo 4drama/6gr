@@ -539,15 +539,6 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 	} while(!index_queue.empty());
 }
 
-sf::Vector2f perspective(sf::Vector2f position, sf::View *view){
-	float depth = 1000;
-	float transform_rate = (depth - position.y) / depth;
-	return sf::Vector2f(
-		(position.x - view->getCenter().x) * transform_rate + view->getCenter().x,
-		(position.y - view->getCenter().y + depth / 3)
-		* transform_rate + view->getCenter().y - depth / 3);
-}
-
 bool on_screen(cell *cell, sf::View *view){
 	int cull = view->getSize().x;
 	if((cell->pos.x > cull) || (cell->pos.x < -cull))
@@ -852,26 +843,12 @@ void object::fill_textures(){
 	object::textures[(int)object::texture_type::MOUNTAIN].loadFromFile("./../data/mountain.png");
 }
 
-game_info::game_info()
-	: Width(1400), Height(900), draw_cells(false), speed(X1), pause(true),
-	window(sf::VideoMode(Width, Height), "Bong"), view(){
-
-	view.setSize(Width, -Height);
-	view.setCenter(0, 0);
-	view.zoom(0.2);
-
-	window.setView(view);
-	window.setVerticalSyncEnabled(true);
-
-	zoom_manager = 0;
-	view_size = view.getSize();
-	display_rate = view_size.x / view_size.y;
-
-	const float side_size = Width/48/3;
-	cell::set_side_size(side_size);
-
+game_info::game_info() : speed(X1), pause(true){
 	map = generate_world(40u);
 	unit::fill_textures();
+
+	const float side_size = 1400/48/3;
+	cell::set_side_size(side_size);
 }
 
 uint32_t add_player(game_info *info, std::string name, bool is_visible){
