@@ -11,7 +11,6 @@ struct terrain;
 class cell;
 struct unit : std::enable_shared_from_this<unit>;
 struct player;
-struct player_info;
 struct game_info;
 
 #include "client.hpp"
@@ -169,26 +168,6 @@ struct game_info{
 
 	cell& get_cell(uint32_t index);
 	void update(float time);
-};
-
-struct player_info{
-	uint32_t player;
-
-	std::list<uint32_t> control_players;
-	std::list<uint32_t> alliance_players;
-	std::list<uint32_t> enemy_players;
-
-	enum relationship_type{
-		NEUTRAL = 0,
-		CONTROL = 1,
-		ALLIANCE = 2,
-		ENEMY = 3
-	};
-
-	std::vector<relationship_type> relationship;
-
-	player_info(game_info *info, uint32_t player_);
-	void update(game_info *info);
 };
 
 std::vector<cell> generate_world(uint32_t size);
