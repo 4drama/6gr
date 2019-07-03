@@ -510,7 +510,8 @@ bool infinity_check(game_info *info, std::shared_ptr<unit> unit, uint32_t point)
 }
 
 std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
-	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index){
+	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index,
+	bool random_dir){
 
 	std::vector<path_cell> map_path{};
 	map_path.resize(info->map.size());
@@ -531,7 +532,7 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 		index_queue.pop_front();
 
 		fill_queue_f(info->map, map_path, index_queue, index, unit, player_index, even);
-		even = !even;
+		even = random_dir ? std::rand() % 1 : !even;
 		if(index == finish_point){
 			map_path[index].path.pop_front();
 		 	return map_path[index].path;
@@ -741,7 +742,7 @@ void draw_map(game_info *info, client *client, float time){
 
 	draw_cell_under_mouse(info, client);
 	draw_selected_cell(info, client);
-	
+
 	client->draw_objects(&object_sprites);
 }
 
@@ -1098,7 +1099,7 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 				std::advance(it, recalculated_depth);
 
 			recalculated_path = path_find(info, this->cell_index,
-				*it, shared_from_this(), player_index);
+				*it, shared_from_this(), player_index, false);
 
 			recalculated_path.splice(recalculated_path.end(),
 				this->path, it, this->path.end());

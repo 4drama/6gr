@@ -166,8 +166,8 @@ void event_handler(game_info *info, float time, uint32_t player_index){
 
 						auto old_front_cell = unit_ptr->path.front();
 
-						unit_ptr->path = path_find(info,
-							unit_ptr->cell_index, finish_cell, unit_ptr, player_index);
+						unit_ptr->path = path_find(info, unit_ptr->cell_index,
+							finish_cell, unit_ptr, player_index, true);
 
 						if(old_front_cell != unit_ptr->path.front())
 							unit_ptr->path_progress = 0;
