@@ -22,6 +22,14 @@ void player_info::update(game_info *info){
 	}
 }
 
+std::list<uint32_t> player_info::get_vision_players_indeces() const{
+	std::list<uint32_t> vision_players = this->control_players;
+	{
+		std::list<uint32_t> addition_vision_players = this->alliance_players;
+		vision_players.splice(vision_players.end(), addition_vision_players);
+	}
+	return vision_players;
+}
 
 client::client(game_info *info, int width_, int height_, uint32_t player_index)
 	: Width(width_), Height(height_), draw_cells(false), zoom_manager(0),
@@ -39,21 +47,26 @@ client::client(game_info *info, int width_, int height_, uint32_t player_index)
 	display_rate = view_size.x / view_size.y;
 }
 
-float client::get_view_scale(){
+float client::get_view_scale() const{
 	return this->view_size.x / this->Width;
+}
+
+void client::set_camera(sf::Vector2f pos){
+	this->view.setCenter(pos);
 }
 
 sf::Vector2f client::perspective(sf::Vector2f position) const {
 	float depth = 1000;
 	float transform_rate = (depth - position.y) / depth;
 	return sf::Vector2f(
-		(position.x - view->getCenter().x) * transform_rate + view->getCenter().x,
-		(position.y - view->getCenter().y + depth / 3)
-		* transform_rate + view->getCenter().y - depth / 3);
+		(position.x - this->view.getCenter().x) * transform_rate
+		+ this->view.getCenter().x,
+		(position.y - this->view.getCenter().y + depth / 3)
+		* transform_rate + this->view.getCenter().y - depth / 3);
 }
 
 bool client::on_screen(cell *cell) const {
-	int cull = view->getSize().x;
+	int cull = this->view.getSize().x;
 	if((cell->pos.x > cull) || (cell->pos.x < -cull))
 		return false;
 	if((cell->pos.y > cull) || (cell->pos.y < -cull))
@@ -63,12 +76,8 @@ bool client::on_screen(cell *cell) const {
 
 bool client::is_visable(cell *cell) const {
 	if(this->on_screen(cell)){
-		for(auto& player_index: this->player.control_players){
-			if(cell->player_visible[player_index])
-				return true;
-		}
-
-		for(auto& player_index: this->player.alliance_players){
+		std::list<uint32_t> vision_players = this->player.get_vision_players_indeces();
+		for(auto& player_index : vision_players){
 			if(cell->player_visible[player_index])
 				return true;
 		}
@@ -81,7 +90,7 @@ bool client::draw_cell(sf::Vertex *transform_shape, cell *cell,
 
 	sf::ConvexShape polygon;
 	polygon.setPointCount(6);
-	polygon.setFillColor(func(cell.ter.type));
+	polygon.setFillColor(func(cell->ter.type));
 
 	for(uint32_t i = 0; i < 7; ++i){
 		polygon.setPoint(i, transform_shape[i].position);
@@ -99,7 +108,7 @@ bool client::draw_cell(sf::Vertex *transform_shape, cell *cell,
 
 void client::draw_out_of_view(cell *cell) const	{
 	this->window.draw(get_sprite_out_of_view(cell->ter.type,
-		this->perspective(cell->pos));
+		this->perspective(cell->pos)));
 }
 
 void client::draw_objects(std::vector<sf::Sprite> *object_sprites) const{
@@ -112,6 +121,31 @@ void client::draw_objects(std::vector<sf::Sprite> *object_sprites) const{
 	}
 }
 
+void client::draw_way(sf::Vertex *line, sf::CircleShape *circle, cell *cell) const{
+	if(this->on_screen(cell)){
+		this->window.draw(line, 2, sf::Lines);
+		this->window.draw(*circle);
+	}
+}
+
+void client::draw_selected_cell(game_info *info) const{
+	for(auto &player_index : this->player.control_players){
+		auto &curr_player = info->players[player_index];
+
+		for(auto &unit : curr_player.selected_units){
+			auto unit_ptr = unit.second.lock();
+			if(this->on_screen(&info->map[unit_ptr->cell_index])){
+
+				sf::Vertex transform_shape[7];
+				create_transform_shape(this, info->map[unit_ptr->cell_index].pos,
+					transform_shape, sf::Color(88, 244, 122));
+
+				this->draw_cell_border(transform_shape);
+			}
+		}
+	}
+}
+
 void client::draw_cell_border(sf::Vertex *transform_shape) const {
 	this->window.draw(transform_shape, 7, sf::LineStrip);
 }
@@ -119,11 +153,7 @@ void client::draw_cell_border(sf::Vertex *transform_shape) const {
 std::vector<uint32_t> client::get_vision_indeces(game_info *info) const{
 	std::vector<uint32_t> vision_indeces{};
 
-	std::list<uint32_t> vision_players = this->player.control_players;
-	{
-		std::list<uint32_t> addition_vision_players = this->player.alliance_players;
-		vision_players.splice(vision_players.end(), addition_vision_players);
-	}
+	std::list<uint32_t> vision_players = this->player.get_vision_players_indeces();
 
 	for(auto &curr_player_index : vision_players){
 		for(auto &unit : info->players[curr_player_index].units){

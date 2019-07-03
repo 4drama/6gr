@@ -9,7 +9,7 @@ enum class terrain_en;
 struct object;
 struct terrain;
 class cell;
-struct unit : std::enable_shared_from_this<unit>;
+struct unit;
 struct player;
 struct game_info;
 
@@ -172,27 +172,29 @@ struct game_info{
 
 std::vector<cell> generate_world(uint32_t size);
 void generate_level(std::vector<cell> *map);
-void draw_map(game_info *info, float time, uint32_t player_index);
+void draw_map(game_info *info, client *client, float time);
 void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed);
 
 uint32_t add_player(game_info *info, std::string name, bool is_visible);
 void add_unit(game_info *info, uint32_t player_index /*, unit*/);
-void player_respawn(game_info *info, uint32_t player_index);
-
-sf::Vector2f mouse_on_map(game_info *info);
+void player_respawn(game_info *info, client *client, uint32_t player_index);
 
 std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index,
 	bool random_dir);
 
-uint32_t get_cell_index_under_mouse(game_info *info);
-void draw_path(game_info *info, std::list<uint32_t> path, float progress);
+uint32_t get_cell_index_under_mouse(game_info *info, client *client);
+void draw_path(game_info *info, client* client, std::list<uint32_t> path,
+	float progress);
 
 std::list<player::selected_unit_type> units_on_cells(
 	game_info *info, std::list<uint32_t> players_indeces, std::list<uint32_t> cells);
 
-void units_draw_paths(game_info *info, uint32_t players_index);
+void units_draw_paths(game_info *info, client *client, uint32_t player_index);
 
 std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_indeces);
+sf::Sprite get_sprite_out_of_view(terrain_en terr, sf::Vector2f pos);
+void create_transform_shape(const client *client, sf::Vector2f pos,
+	sf::Vertex *transform_shape, sf::Color color);
 
 #endif
