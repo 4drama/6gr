@@ -182,7 +182,8 @@ void player_respawn(game_info *info, uint32_t player_index);
 sf::Vector2f mouse_on_map(game_info *info);
 
 std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
-	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index);
+	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index,
+	bool random_dir);
 
 uint32_t get_cell_index_under_mouse(game_info *info);
 void draw_path(game_info *info, std::list<uint32_t> path, float progress);
