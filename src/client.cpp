@@ -1,5 +1,8 @@
 #include "client.hpp"
 
+#include "control.hpp"
+#include "gui.hpp"
+
 player_info::player_info(game_info *info, uint32_t player_) : player(player_){
 	this->control_players.emplace_back(player);
 	update(info);
@@ -31,6 +34,10 @@ std::list<uint32_t> player_info::get_vision_players_indeces() const{
 	return vision_players;
 }
 
+uint32_t player_info::get_index() const{
+	return this->player;
+}
+
 client::client(game_info *info, int width_, int height_, uint32_t player_index)
 	: Width(width_), Height(height_), draw_cells(false), zoom_manager(0),
 	window(sf::VideoMode(Width, Height), "game client"),
@@ -45,14 +52,176 @@ client::client(game_info *info, int width_, int height_, uint32_t player_index)
 
 	view_size = view.getSize();
 	display_rate = view_size.x / view_size.y;
+
+	player_respawn(info, this);
 }
 
 float client::get_view_scale() const{
 	return this->view_size.x / this->Width;
 }
 
+float client::get_view_width() const{
+	return this->view_size.x;
+}
+
+float client::get_view_height() const{
+	return this->view_size.y;
+}
+
+int client::get_zoom_state() const{
+	return this->zoom_manager;
+}
+
+bool client::is_draw_cells() const{
+	return this->draw_cells;
+}
+
+player_info client::get_player_info() const{
+	return player;
+}
+
 void client::set_camera(sf::Vector2f pos){
 	this->view.setCenter(pos);
+}
+
+void client::change_zoom(int value){
+	if((value < 0) && (this->zoom_manager > -1)){
+		while(value++){
+			--this->zoom_manager;
+			this->view_size.x += 50;
+			this->view_size.y += 50 / this->display_rate;
+		}
+	} else if((value > 0) && (this->zoom_manager < 3)){
+		while(value--){
+			++this->zoom_manager;
+			this->view_size.x -= 50;
+			this->view_size.y -= 50 / this->display_rate;
+		}
+	}
+
+	this->view.setSize(this->view_size);
+}
+
+void client::control_update(game_info *info, float time){
+	sf::Event event;
+	float speed = 5;
+
+	while(this->window.pollEvent(event)){
+		if(event.type == sf::Event::Closed ||
+		  (event.type == sf::Event::KeyPressed &&
+		   event.key.code == sf::Keyboard::Escape))
+			this->window.close();
+
+
+		static sf::Vector2f last_pasition = sf::Vector2f(0, 0);
+		static bool is_map_move = false;
+		if (event.type == sf::Event::MouseButtonPressed &&
+			event.mouseButton.button == sf::Mouse::Button::Middle){
+
+			is_map_move = true;
+			last_pasition = this->mouse_on_map();
+
+		} else if(event.type == sf::Event::MouseMoved ){
+
+			if(is_map_move){
+				sf::Vector2f diff = last_pasition - this->mouse_on_map();
+				last_pasition = this->mouse_on_map();
+
+				move_map(&info->map, cardinal_directions_t::WEST, diff.x * 0.65);
+				move_map(&info->map, cardinal_directions_t::SOUTH, diff.y * 1.1);
+			}
+		}
+		if (event.type == sf::Event::MouseButtonReleased &&
+			event.mouseButton.button == sf::Mouse::Button::Middle){
+			is_map_move = false;
+		}
+
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Left){
+			move_map(&info->map, cardinal_directions_t::EAST, speed);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Right){
+			move_map(&info->map, cardinal_directions_t::WEST, speed);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Up){
+			move_map(&info->map, cardinal_directions_t::SOUTH, speed);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Down){
+			move_map(&info->map, cardinal_directions_t::NORTH, speed);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Subtract){
+			speed_down(info);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Add){
+			speed_up(info);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::Space){
+			pause(info);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::LBracket){
+			this->change_zoom(-1);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::RBracket){
+			this->change_zoom(1);
+		}
+		if(event.type == sf::Event::KeyPressed &&
+			event.key.code == sf::Keyboard::F1){
+			this->change_show_grid();
+		}
+
+		static float left_click_cd = 0;
+		left_click_cd -= time;
+		if (event.type == sf::Event::MouseButtonPressed &&
+			event.mouseButton.button == sf::Mouse::Button::Left){
+			if(left_click_cd <= 0){
+				if(!gui::instance().gui_interact(info, this)){
+					select_cell(info, this->player.get_index(), this);
+					select_units(info, this->player.get_index());
+				}
+				left_click_cd = 30;
+			}
+		}
+
+		if (event.type == sf::Event::MouseButtonPressed &&
+			event.mouseButton.button == sf::Mouse::Button::Right){
+
+			if(info->players[this->player.get_index()].selected_units.size() != 0){
+				auto *selected_units = &info->players[this->player.get_index()].selected_units;
+				auto finish_cell = get_cell_index_under_mouse(info, this);
+
+				for(auto &curr_unit : *selected_units){
+					if((curr_unit.first == this->player.get_index()) && (curr_unit.second.use_count() != 0)){
+						std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
+
+						auto old_front_cell = unit_ptr->path.front();
+
+						unit_ptr->path = path_find(info, unit_ptr->cell_index,
+							finish_cell, unit_ptr, this->player.get_index(), true);
+
+						if(old_front_cell != unit_ptr->path.front())
+							unit_ptr->path_progress = 0;
+					}
+				}
+			}
+		}
+
+		if( event.type == sf::Event::MouseWheelScrolled ){
+			this->change_zoom(event.mouseWheelScroll.delta);
+		}
+
+	}
+}
+
+void client::change_show_grid(){
+	this->draw_cells = !this->draw_cells;
 }
 
 sf::Vector2f client::perspective(sf::Vector2f position) const {
@@ -83,6 +252,21 @@ bool client::is_visable(cell *cell) const {
 		}
 	}
 	return false;
+}
+
+void client::draw(game_info *info, float time){
+	if(this->window.isOpen()){
+		this->window.clear();
+
+		this->window.setView(this->view);
+		draw_map(info, this, time);
+		gui::instance().draw(info, this);
+
+		this->show_cursor_point();
+		units_draw_paths(info, this);
+
+		this->window.display();
+	}
 }
 
 bool client::draw_cell(sf::Vertex *transform_shape, cell *cell,
@@ -146,8 +330,28 @@ void client::draw_selected_cell(game_info *info) const{
 	}
 }
 
+void client::draw_label(sf::RectangleShape *label) const{
+	this->window.draw(*label);
+}
+
 void client::draw_cell_border(sf::Vertex *transform_shape) const {
 	this->window.draw(transform_shape, 7, sf::LineStrip);
+}
+
+void client::draw_buttons(std::vector< button > *buttons) const{
+	for(auto &but : *buttons){
+		this->window.draw(but.sprites[but.state]);
+	}
+}
+
+void client::show_cursor_point(){
+	sf::Vector2f pos = this->mouse_on_map();
+
+	sf::CircleShape circle(200);
+	circle.setRadius(0.4);
+	circle.setOrigin(0.2, 0.2);
+	circle.setPosition(pos);
+	this->window.draw(circle);
 }
 
 std::vector<uint32_t> client::get_vision_indeces(game_info *info) const{
@@ -176,7 +380,6 @@ sf::Vector2f client::mouse_on_map() const {
 
 
 	sf::Vector2f pos = sf::Vector2f(position.x - 9, position.y + 29);
-	sf::Vector2f view_size = this->view.getSize();
 	float scale = this->get_view_scale();
-	return sf::Vector2f(pos.x / scale, pos.y / scale);
+	return sf::Vector2f(pos.x * scale, pos.y * scale);
 }

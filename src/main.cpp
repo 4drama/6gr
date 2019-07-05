@@ -9,38 +9,30 @@
 #include "gui.hpp"
 
 #include <iostream>
+#include <memory>
 
 int main(){
 	sf::Clock clock;
 	float time;
-
 	game_info info{};
-	uint32_t player_index = add_player(&info, "Player 1", true);
+	uint32_t player_index = add_player(&info, "Player 1");
+	uint32_t player_index2 = add_player(&info, "Player 2");
 
-	client client1(&info, 1400, 900, player_index);
+	std::vector<std::shared_ptr<client> > clients{};
+	clients.emplace_back(std::make_shared<client>(&info, 1400, 900, player_index));
+	clients.emplace_back(std::make_shared<client>(&info, 1400, 900, player_index2));
 
-//	player_info player_info(&info, player_index);
-
-	player_respawn(&info, player_index);
-
-	while(info.window.isOpen()){
-		event_handler(&info, time, player_index);
-
-		info.window.clear();
+	while(true){
 		time = clock.getElapsedTime().asMilliseconds();
 		clock.restart();
 
-		info.update(time);
+		for(auto& client : clients){
 
-		info.window.setView(info.view);
-		draw_map(&info, time, player_index);
-		gui::instance().draw(&info, &player_info);
+			client->control_update(&info, time);
+			info.update(time);
 
-	//	show_cursor_point(&info);
-
-		units_draw_paths(&info, player_index);
-
-		info.window.display();
+			client->draw(&info, time);
+		}
 	}
 
 	return 0;

@@ -3,7 +3,11 @@
 
 #include <SFML/Graphics.hpp>
 
+struct button;
+class gui;
+
 #include "map.hpp"
+#include "client.hpp"
 
 #include <functional>
 
@@ -15,8 +19,8 @@ struct button{
 	sf::Sprite sprites[2];
 	turn state;
 
-	std::function<void(game_info const& info, button* but)> upd;
-	std::function<void(game_info &info, button* but)> inter;
+	std::function<void(game_info const& info, client const& client, button* but)> upd;
+	std::function<void(game_info &info, client &client, button* but)> inter;
 };
 
 class gui{
@@ -28,9 +32,8 @@ public:
 
 	static gui& instance();
 
-	void update(game_info *info);
-	void draw(game_info *info, player_info* player_info);
-	bool gui_interact(game_info *info);
+	void draw(game_info *info, client *client);
+	bool gui_interact(game_info *info, client *client);
 
 private:
 	gui();
@@ -43,8 +46,8 @@ private:
 	std::vector< sf::Texture > textures{};
 	std::vector< button > buttons{};
 	button load_button(uint32_t step);
-};
 
-void show_cursor_point(game_info *info);
+	void update(game_info *info, client *client);
+};
 
 #endif

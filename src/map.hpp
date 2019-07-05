@@ -175,9 +175,9 @@ void generate_level(std::vector<cell> *map);
 void draw_map(game_info *info, client *client, float time);
 void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed);
 
-uint32_t add_player(game_info *info, std::string name, bool is_visible);
+uint32_t add_player(game_info *info, std::string name);
 void add_unit(game_info *info, uint32_t player_index /*, unit*/);
-void player_respawn(game_info *info, client *client, uint32_t player_index);
+void player_respawn(game_info *info, client *client);
 
 std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index,
@@ -190,7 +190,7 @@ void draw_path(game_info *info, client* client, std::list<uint32_t> path,
 std::list<player::selected_unit_type> units_on_cells(
 	game_info *info, std::list<uint32_t> players_indeces, std::list<uint32_t> cells);
 
-void units_draw_paths(game_info *info, client *client, uint32_t player_index);
+void units_draw_paths(game_info *info, client *client);
 
 std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_indeces);
 sf::Sprite get_sprite_out_of_view(terrain_en terr, sf::Vector2f pos);

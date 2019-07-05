@@ -5,13 +5,13 @@
 
 #include "map.hpp"
 
-void event_handler(game_info *info, float time, uint32_t player_index);
+//void event_handler(game_info *info, float time, client *client);
 
-void change_zoom(game_info *info, int value);
 void pause(game_info *info);
 void speed_up(game_info *info);
 void speed_down(game_info *info);
-void show_grid(game_info *info);
 void set_speed(game_info *info, game_info::speed_e speed);
+void select_cell(game_info *info, uint32_t player_index, client* client);
+void select_units(game_info *info, uint32_t player_index);
 
 #endif

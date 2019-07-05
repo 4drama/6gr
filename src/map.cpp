@@ -773,11 +773,11 @@ void object::fill_textures(){
 }
 
 game_info::game_info() : speed(X1), pause(true){
-	map = generate_world(40u);
-	unit::fill_textures();
-
 	const float side_size = 1400/48/3;
 	cell::set_side_size(side_size);
+
+	map = generate_world(40u);
+	unit::fill_textures();
 }
 
 uint32_t add_player(game_info *info, std::string name){
@@ -889,8 +889,9 @@ uint32_t choose_spawn_cell_f(game_info *info){
 
 }
 
-void player_respawn(game_info *info, client *client, uint32_t player_index){
-	uint32_t spawn_cell_index = choose_spawn_cell_f(info);
+void player_respawn(game_info *info, client *client){
+	uint32_t player_index = client->get_player_info().get_index();
+	uint32_t spawn_cell_index = 0;// choose_spawn_cell_f(info);
 	if(client != nullptr)
 		client->set_camera(info->map[spawn_cell_index].pos);
 
@@ -1049,7 +1050,8 @@ std::list<player::selected_unit_type> units_on_cells(
 	return result;
 }
 
-void units_draw_paths(game_info *info, client *client, uint32_t player_index){
+void units_draw_paths(game_info *info, client *client){
+	uint32_t player_index = client->get_player_info().get_index();
 	auto &selected_units = info->players[player_index].selected_units;
 
 	for(auto &curr_unit : selected_units){
