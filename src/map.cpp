@@ -629,7 +629,7 @@ void draw_scheme_map_f(game_info *info, client *client){
 		if(client->is_visable(&cell)){
 
 			sf::Vertex transform_shape[7];
-			create_transform_shape(client, cell.pos,
+			create_transform_shape(client, draw_position(&cell, client),
 				transform_shape, sf::Color::Black);
 
 			if(client->draw_cell(transform_shape, &cell, get_color_out_of_view_f))
@@ -647,13 +647,13 @@ void draw_vision_map_f(game_info *info, client *client,
 		if(client->on_screen(&cell)){
 
 			sf::Vertex transform_shape[7];
-			create_transform_shape(client, cell.pos,
+			create_transform_shape(client, draw_position(&cell, client),
 				transform_shape, sf::Color::Black);
 
 			if(client->draw_cell(transform_shape, &cell, get_color_in_view_f)){
 				for(auto &obj : cell.ter.objects){
 					sf::Sprite sprite = obj.update_sprite(time);
-					sprite.setPosition(client->perspective(cell.pos + obj.pos));
+					sprite.setPosition(client->perspective(draw_position(&cell, client) + obj.pos));
 					object_sprites->emplace_back(sprite);
 				}
 			}
@@ -666,7 +666,7 @@ void draw_vision_map_f(game_info *info, client *client,
 bool is_inside_f(client *client, cell *cell, sf::Vector2f pos,
 	sf::Vertex *transform_shape){
 
-	create_transform_shape(client, cell->pos, transform_shape, sf::Color::White);
+	create_transform_shape(client, draw_position(cell, client), transform_shape, sf::Color::White);
 
 	for(uint32_t i = 0; i < 6; ++i){
 
@@ -698,7 +698,8 @@ void prepare_units_sprites(game_info *info, client *client,
 
 				for(auto &sprite : unit->sprites){
 					sprite.setPosition( client->perspective(
-						info->map[unit->cell_index].pos + sf::Vector2f{2, -8}));
+						draw_position(&info->map[unit->cell_index], client)
+							+ sf::Vector2f{2, -8}));
 
 					object_sprites.emplace_back(sprite);
 				}
@@ -736,7 +737,7 @@ void draw_map(game_info *info, client *client, float time){
 	client->draw_objects(&object_sprites);
 }
 
-void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed){
+/*void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed){
 	using cd_t = cardinal_directions_t;
 
 	sf::Vector2f offset;
@@ -754,7 +755,7 @@ void move_map(std::vector<cell> *map, cardinal_directions_t dir, float speed){
 
 	for(auto &cell : *map)
 		cell.pos += offset;
-}
+}*/
 
 std::vector<cell> generate_world(uint32_t size){
 	srand(time(NULL));
@@ -896,9 +897,9 @@ uint32_t choose_spawn_cell_f(game_info *info){
 
 void player_respawn(game_info *info, client *client){
 	uint32_t player_index = client->get_player_info().get_index();
-	uint32_t spawn_cell_index = 0;// choose_spawn_cell_f(info);
+	uint32_t spawn_cell_index = choose_spawn_cell_f(info);
 	if(client != nullptr)
-		client->set_camera(info->map[spawn_cell_index].pos);
+		client->set_camera(-info->map[spawn_cell_index].pos);
 
 	std::shared_ptr<unit> caravan =
 		unit::create_caravan(unit::weight_level_type::LIGHT, spawn_cell_index);
@@ -990,9 +991,9 @@ void draw_path(game_info *info, client* client, std::list<uint32_t> path,
 	if(path.size() == 0)
 		return ;
 
-	sf::Vector2f first_point = client->perspective(info->map[path.front()].pos);
+	sf::Vector2f first_point = client->perspective(draw_position(&info->map[path.front()], client));
 	path.pop_front();
-	sf::Vector2f second_point = client->perspective(info->map[path.front()].pos);
+	sf::Vector2f second_point = client->perspective(draw_position(&info->map[path.front()], client));
 
 	sf::Vector2f dif = second_point - first_point;
 	dif *= progress;
@@ -1009,7 +1010,7 @@ void draw_path(game_info *info, client* client, std::list<uint32_t> path,
 
 	while(!path.empty()){
 		cell &cell = info->map[path.front()];
-		second_point = client->perspective(cell.pos);
+		second_point = client->perspective(draw_position(&cell, client));
 		path.pop_front();
 
 		line[1] = sf::Vertex(second_point);

@@ -40,6 +40,7 @@ public:
 	client(game_info *info, int width_, int height_, uint32_t player_index);
 
 	void set_camera(sf::Vector2f pos);
+	void move_camera(cardinal_directions_t dir, float speed);
 	void change_zoom(int value);
 	void change_show_grid();
 	void control_update(game_info *info, float time);
@@ -47,6 +48,7 @@ public:
 	float get_view_scale() const;
 	float get_view_width() const;
 	float get_view_height() const;
+	inline sf::Vector2f get_map_offset() const noexcept {return this->camera_pos;};
 
 	int get_zoom_state() const;
 	bool is_draw_cells() const;
@@ -78,6 +80,7 @@ private:
 
 	mutable sf::RenderWindow window;
 	sf::View view;
+	sf::Vector2f camera_pos;
 
 	sf::Vector2f view_size;
 	float display_rate;
@@ -87,5 +90,7 @@ private:
 
 	player_info player;
 };
+
+sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept;
 
 #endif

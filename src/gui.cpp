@@ -184,7 +184,8 @@ void draw_label(game_info *info, client *client,
 
 	sf::RectangleShape label(sf::Vector2f(width, height));
 	label.setOrigin(width / 2, height / 2);
-	label.setPosition(client->perspective(info->map[cell_index].pos + offset));
+	label.setPosition(client->perspective(
+		draw_position(&info->map[cell_index], client) + offset));
 	label.setOutlineThickness(1 * scale);
 
 	switch (relationship) {

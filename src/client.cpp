@@ -81,7 +81,26 @@ player_info client::get_player_info() const{
 }
 
 void client::set_camera(sf::Vector2f pos){
-	this->view.setCenter(pos);
+	this->camera_pos = pos;
+}
+
+void client::move_camera(cardinal_directions_t dir, float speed){
+	using cd_t = cardinal_directions_t;
+
+	sf::Vector2f offset;
+	if(dir < cd_t::END)
+		offset = cell::offset[int(dir)];
+	else if(dir == cd_t::NORTH){
+		offset = (cell::offset[(int)cd_t::WEST_NORTH]
+			+ cell::offset[(int)cd_t::EAST_NORTH]) / (float)2;
+	} else if(dir == cd_t::SOUTH){
+		offset = (cell::offset[(int)cd_t::EAST_SOUTH]
+			+ cell::offset[(int)cd_t::WEST_SOUTH]) / (float)2;
+	}
+
+	offset /= (float)10 / speed;
+
+	this->camera_pos += offset;
 }
 
 void client::change_zoom(int value){
@@ -127,8 +146,8 @@ void client::control_update(game_info *info, float time){
 				sf::Vector2f diff = last_pasition - this->mouse_on_map();
 				last_pasition = this->mouse_on_map();
 
-				move_map(&info->map, cardinal_directions_t::WEST, diff.x * 0.65);
-				move_map(&info->map, cardinal_directions_t::SOUTH, diff.y * 1.1);
+				move_camera(cardinal_directions_t::WEST, diff.x * 0.65);
+				move_camera(cardinal_directions_t::SOUTH, diff.y * 1.1);
 			}
 		}
 		if (event.type == sf::Event::MouseButtonReleased &&
@@ -138,19 +157,19 @@ void client::control_update(game_info *info, float time){
 
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Left){
-			move_map(&info->map, cardinal_directions_t::EAST, speed);
+			move_camera(cardinal_directions_t::EAST, speed);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Right){
-			move_map(&info->map, cardinal_directions_t::WEST, speed);
+			move_camera(cardinal_directions_t::WEST, speed);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Up){
-			move_map(&info->map, cardinal_directions_t::SOUTH, speed);
+			move_camera(cardinal_directions_t::SOUTH, speed);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Down){
-			move_map(&info->map, cardinal_directions_t::NORTH, speed);
+			move_camera(cardinal_directions_t::NORTH, speed);
 		}
 		if(event.type == sf::Event::KeyPressed &&
 			event.key.code == sf::Keyboard::Subtract){
@@ -236,9 +255,9 @@ sf::Vector2f client::perspective(sf::Vector2f position) const {
 
 bool client::on_screen(cell *cell) const {
 	int cull = this->view.getSize().x;
-	if((cell->pos.x > cull) || (cell->pos.x < -cull))
+	if((draw_position(cell, this).x > cull) || (draw_position(cell, this).x < -cull))
 		return false;
-	if((cell->pos.y > cull) || (cell->pos.y < -cull))
+	if((draw_position(cell, this).y > cull) || (draw_position(cell, this).y < -cull))
 		return false;
 	return true;
 }
@@ -292,7 +311,7 @@ bool client::draw_cell(sf::Vertex *transform_shape, cell *cell,
 
 void client::draw_out_of_view(cell *cell) const	{
 	this->window.draw(get_sprite_out_of_view(cell->ter.type,
-		this->perspective(cell->pos)));
+		this->perspective(draw_position(cell, this))));
 }
 
 void client::draw_objects(std::vector<sf::Sprite> *object_sprites) const{
@@ -321,7 +340,8 @@ void client::draw_selected_cell(game_info *info) const{
 			if(this->on_screen(&info->map[unit_ptr->cell_index])){
 
 				sf::Vertex transform_shape[7];
-				create_transform_shape(this, info->map[unit_ptr->cell_index].pos,
+				create_transform_shape(this, 
+					draw_position(&info->map[unit_ptr->cell_index], this),
 					transform_shape, sf::Color(88, 244, 122));
 
 				this->draw_cell_border(transform_shape);
@@ -383,3 +403,7 @@ sf::Vector2f client::mouse_on_map() const {
 	float scale = this->get_view_scale();
 	return sf::Vector2f(pos.x * scale, pos.y * scale);
 }
+
+sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept {
+	return cell_ptr->pos + client_ptr->get_map_offset();
+};
