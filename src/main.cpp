@@ -15,6 +15,7 @@ int main(){
 	sf::Clock clock;
 	float time;
 	game_info info{};
+
 	uint32_t player_index = add_player(&info, "Player 1");
 	uint32_t player_index2 = add_player(&info, "Player 2");
 

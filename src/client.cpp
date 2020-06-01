@@ -3,45 +3,10 @@
 #include "control.hpp"
 #include "gui.hpp"
 
-player_info::player_info(game_info *info, uint32_t player_) : player(player_){
-	this->control_players.emplace_back(player);
-	update(info);
-}
-
-void player_info::update(game_info *info){
-	this->relationship.assign(info->players.size(),
-		player_info::relationship_type::NEUTRAL);
-
-	for(auto &player_index : this->control_players){
-		this->relationship[player_index] = player_info::relationship_type::CONTROL;
-	}
-
-	for(auto &player_index : this->alliance_players){
-		this->relationship[player_index] = player_info::relationship_type::ALLIANCE;
-	}
-
-	for(auto &player_index : this->enemy_players){
-		this->relationship[player_index] = player_info::relationship_type::ENEMY;
-	}
-}
-
-std::list<uint32_t> player_info::get_vision_players_indeces() const{
-	std::list<uint32_t> vision_players = this->control_players;
-	{
-		std::list<uint32_t> addition_vision_players = this->alliance_players;
-		vision_players.splice(vision_players.end(), addition_vision_players);
-	}
-	return vision_players;
-}
-
-uint32_t player_info::get_index() const{
-	return this->player;
-}
-
 client::client(game_info *info, int width_, int height_, uint32_t player_index)
 	: Width(width_), Height(height_), draw_cells(false), zoom_manager(0),
 	window(sf::VideoMode(Width, Height), "game client"),
-	view(), player(info, player_index){
+	view(), player(info->players[player_index].info){
 
 	view.setSize(Width, -Height);
 	view.setCenter(0, 0);
@@ -76,8 +41,8 @@ bool client::is_draw_cells() const{
 	return this->draw_cells;
 }
 
-player_info client::get_player_info() const{
-	return player;
+const player_info& client::get_player_info() const{
+	return *player;
 }
 
 void client::set_camera(sf::Vector2f pos){
@@ -202,8 +167,8 @@ void client::control_update(game_info *info, float time){
 			event.mouseButton.button == sf::Mouse::Button::Left){
 			if(left_click_cd <= 0){
 				if(!gui::instance().gui_interact(info, this)){
-					select_cell(info, this->player.get_index(), this);
-					select_units(info, this->player.get_index());
+					select_cell(info, this->player->get_index(), this);
+					select_units(info, this->player->get_index());
 				}
 				left_click_cd = 30;
 			}
@@ -212,18 +177,18 @@ void client::control_update(game_info *info, float time){
 		if (event.type == sf::Event::MouseButtonPressed &&
 			event.mouseButton.button == sf::Mouse::Button::Right){
 
-			if(info->players[this->player.get_index()].selected_units.size() != 0){
-				auto *selected_units = &info->players[this->player.get_index()].selected_units;
+			if(info->players[this->player->get_index()].selected_units.size() != 0){
+				auto *selected_units = &info->players[this->player->get_index()].selected_units;
 				auto finish_cell = get_cell_index_under_mouse(info, this);
 
 				for(auto &curr_unit : *selected_units){
-					if((curr_unit.first == this->player.get_index()) && (curr_unit.second.use_count() != 0)){
+					if((curr_unit.first == this->player->get_index()) && (curr_unit.second.use_count() != 0)){
 						std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
 
 						auto old_front_cell = unit_ptr->path.front();
 
 						unit_ptr->path = path_find(info, unit_ptr->cell_index,
-							finish_cell, unit_ptr, this->player.get_index(), true);
+							finish_cell, unit_ptr, this->player->get_index(), true);
 
 						if(old_front_cell != unit_ptr->path.front())
 							unit_ptr->path_progress = 0;
@@ -264,7 +229,7 @@ bool client::on_screen(cell *cell) const {
 
 bool client::is_visable(cell *cell) const {
 	if(this->on_screen(cell)){
-		std::list<uint32_t> vision_players = this->player.get_vision_players_indeces();
+		std::list<uint32_t> vision_players = this->player->get_vision_players_indeces();
 		for(auto& player_index : vision_players){
 			if(cell->player_visible[player_index])
 				return true;
@@ -332,7 +297,7 @@ void client::draw_way(sf::Vertex *line, sf::CircleShape *circle, cell *cell) con
 }
 
 void client::draw_selected_cell(game_info *info) const{
-	for(auto &player_index : this->player.control_players){
+	for(auto &player_index : this->player->control_players){
 		auto &curr_player = info->players[player_index];
 
 		for(auto &unit : curr_player.selected_units){
@@ -340,7 +305,7 @@ void client::draw_selected_cell(game_info *info) const{
 			if(this->on_screen(&info->map[unit_ptr->cell_index])){
 
 				sf::Vertex transform_shape[7];
-				create_transform_shape(this, 
+				create_transform_shape(this,
 					draw_position(&info->map[unit_ptr->cell_index], this),
 					transform_shape, sf::Color(88, 244, 122));
 
@@ -377,7 +342,7 @@ void client::show_cursor_point(){
 std::vector<uint32_t> client::get_vision_indeces(game_info *info) const{
 	std::vector<uint32_t> vision_indeces{};
 
-	std::list<uint32_t> vision_players = this->player.get_vision_players_indeces();
+	std::list<uint32_t> vision_players = this->player->get_vision_players_indeces();
 
 	for(auto &curr_player_index : vision_players){
 		for(auto &unit : info->players[curr_player_index].units){

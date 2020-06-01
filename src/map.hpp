@@ -104,6 +104,8 @@ public:
 		{ UINT32_MAX, UINT32_MAX, UINT32_MAX,
 		UINT32_MAX, UINT32_MAX, UINT32_MAX };
 
+	std::shared_ptr<unit> unit = nullptr;
+
 	std::vector<bool> player_visible;
 };
 
@@ -141,6 +143,29 @@ private:
 	void unit_update_move(game_info *info, uint32_t player_index, float time);
 };
 
+struct player_info{
+	uint32_t player;
+
+	std::list<uint32_t> control_players;
+	std::list<uint32_t> alliance_players;
+	std::list<uint32_t> enemy_players;
+
+	enum relationship_type{
+		NEUTRAL = 0,
+		CONTROL = 1,
+		ALLIANCE = 2,
+		ENEMY = 3
+	};
+
+	std::vector<relationship_type> relationship;
+
+	player_info(game_info *info, uint32_t player_);
+	void update(game_info *info);
+
+	std::list<uint32_t> get_vision_players_indeces() const;
+	uint32_t get_index() const;
+};
+
 struct player{
 	using player_index_type = uint32_t;
 	using selected_unit_type = std::pair< player_index_type, std::weak_ptr<unit> >;
@@ -150,6 +175,9 @@ struct player{
 
 	uint32_t selected_cell = UINT32_MAX;
 	std::vector< selected_unit_type > selected_units{};
+	std::shared_ptr<player_info> info;
+
+	player(game_info *info, uint32_t player_index);
 };
 
 struct game_info{

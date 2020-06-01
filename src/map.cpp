@@ -459,20 +459,23 @@ struct path_cell{
 };
 
 float get_path_weight_f(std::vector<cell> &map, uint32_t target_cell_index,
-	std::shared_ptr<unit> unit, uint32_t player_index){
+	std::shared_ptr<unit> unit, uint32_t player_index, std::vector<bool> *vision_map){
 	terrain_en ter_type = map[target_cell_index].ter.type;
-	if(unit->speed[(int)ter_type] == 0){
-		return INFINITY;
-	}
-	if(map[target_cell_index].player_visible[player_index] == true)
+	if(map[target_cell_index].player_visible[player_index] == true){
+		if(unit->speed[(int)ter_type] == 0){
+			return INFINITY;
+		} else if((map[target_cell_index].unit != nullptr)
+			&& vision_map->at(target_cell_index)){
+			return 99999999;
+		}
 		return 1 / unit->speed[(int)ter_type];
-	else
+	} else
 		return 1.5 / unit->speed[(int)terrain_en::PLAIN];
 }
 
 void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
 	std::list<uint32_t> &index_queue, uint32_t index, std::shared_ptr<unit> unit,
-	uint32_t player_index, bool even){
+	uint32_t player_index, bool even, std::vector<bool> *vision_map){
 
 	using cd = cardinal_directions_t;
 
@@ -487,7 +490,7 @@ void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
 			continue;
 
 		float weight = map_path[index].weight + get_path_weight_f(map, dir_index,
-			unit, player_index);
+			unit, player_index, vision_map);
 		if(map_path[dir_index].weight > weight){
 			std::list<uint32_t> path = map_path[index].path;
 			path.emplace_back(dir_index);
@@ -513,6 +516,10 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index,
 	bool random_dir){
 
+	auto player_info = info->players[player_index].info;
+	std::vector<bool> *vision_map =
+		get_vision_map(info, player_info->get_vision_players_indeces());
+
 	std::vector<path_cell> map_path{};
 	map_path.resize(info->map.size());
 
@@ -531,7 +538,8 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 		index = index_queue.front();
 		index_queue.pop_front();
 
-		fill_queue_f(info->map, map_path, index_queue, index, unit, player_index, even);
+		fill_queue_f(info->map, map_path, index_queue, index, unit,
+			player_index, even, vision_map);
 		even = random_dir ? std::rand() % 1 : !even;
 		if(index == finish_point){
 			map_path[index].path.pop_front();
@@ -786,16 +794,58 @@ game_info::game_info() : speed(X1), pause(true){
 	unit::fill_textures();
 }
 
+player_info::player_info(game_info *info, uint32_t player_) : player(player_){
+	this->control_players.emplace_back(player_);
+//	this->update(info);
+}
+
+void player_info::update(game_info *info){
+	this->relationship.assign(info->players.size(),
+		player_info::relationship_type::NEUTRAL);
+
+	for(auto &player_index : this->control_players){
+		this->relationship[player_index] = player_info::relationship_type::CONTROL;
+	}
+
+	for(auto &player_index : this->alliance_players){
+		this->relationship[player_index] = player_info::relationship_type::ALLIANCE;
+	}
+
+	for(auto &player_index : this->enemy_players){
+		this->relationship[player_index] = player_info::relationship_type::ENEMY;
+	}
+}
+
+std::list<uint32_t> player_info::get_vision_players_indeces() const{
+	std::list<uint32_t> vision_players = this->control_players;
+	{
+		std::list<uint32_t> addition_vision_players = this->alliance_players;
+		vision_players.splice(vision_players.end(), addition_vision_players);
+	}
+	return vision_players;
+}
+
+uint32_t player_info::get_index() const{
+	return this->player;
+}
+
+player::player(game_info *info, uint32_t player_index)
+	: info(std::make_shared<player_info>(info, player_index)){
+}
+
 uint32_t add_player(game_info *info, std::string name){
 	if(info->map.size() == 0)
 		throw std::runtime_error("World not created.");
 
-	player player{};
+	uint32_t player_index = info->players.size();
+
+	player player(info, player_index);
 	if(name != "")
 		player.name = name;
 
-	uint32_t player_index = info->players.size();
 	info->players.emplace_back(player);
+	for(auto &c_player : info->players)
+		c_player.info->update(info);
 
 	uint32_t players_count = info->players.size();
 	std::for_each(info->map.begin(), info->map.end(),
@@ -903,6 +953,7 @@ void player_respawn(game_info *info, client *client){
 
 	std::shared_ptr<unit> caravan =
 		unit::create_caravan(unit::weight_level_type::LIGHT, spawn_cell_index);
+	info->map[spawn_cell_index].unit = caravan;
 
 	info->players[player_index].units.emplace_back(caravan);
 
@@ -1082,13 +1133,17 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 	terrain_en terr_type = info->get_cell(this->path.front()).ter.type;
 	this->path_progress += time * this->speed_mod * this->speed[(int)terr_type];
 
-	if(this->cell_index == this->path.back()){
+	if((this->cell_index == this->path.back())
+		|| (info->get_cell(this->path.front()).unit != nullptr) ){
 		this->path.clear();
 	}
 
 	if(this->path_progress > 1){
+		info->map[this->cell_index].unit = nullptr;
 		this->cell_index = this->path.front();
+		info->map[this->cell_index].unit = shared_from_this();
 		this->path.pop_front();
+
 		this->path_progress -= 1;
 
 		if(!this->path.empty()){

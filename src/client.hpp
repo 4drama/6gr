@@ -11,29 +11,7 @@ class client;
 
 #include <list>
 #include <functional>
-
-struct player_info{
-	uint32_t player;
-
-	std::list<uint32_t> control_players;
-	std::list<uint32_t> alliance_players;
-	std::list<uint32_t> enemy_players;
-
-	enum relationship_type{
-		NEUTRAL = 0,
-		CONTROL = 1,
-		ALLIANCE = 2,
-		ENEMY = 3
-	};
-
-	std::vector<relationship_type> relationship;
-
-	player_info(game_info *info, uint32_t player_);
-	void update(game_info *info);
-
-	std::list<uint32_t> get_vision_players_indeces() const;
-	uint32_t get_index() const;
-};
+#include <memory>
 
 class client{
 public:
@@ -53,7 +31,7 @@ public:
 	int get_zoom_state() const;
 	bool is_draw_cells() const;
 
-	player_info get_player_info() const;
+	const player_info& get_player_info() const;
 
 	sf::Vector2f perspective(sf::Vector2f position) const;
 	bool on_screen(cell *cell) const;
@@ -88,7 +66,7 @@ private:
 	bool draw_cells;
 	int zoom_manager;
 
-	player_info player;
+	std::shared_ptr<player_info> player;
 };
 
 sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept;
