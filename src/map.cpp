@@ -687,10 +687,15 @@ bool is_inside_f(client *client, cell *cell, sf::Vector2f pos,
 
 void prepare_units_sprites(game_info *info, client *client,
 	std::vector<sf::Sprite> &object_sprites){
+	player_info player_info = client->get_player_info();
+	std::vector<bool> *vision_map =
+		get_vision_map(info, player_info.get_vision_players_indeces());
 
 	for(auto &player : info->players){
 		for(auto &unit : player.units){
-			if(client->is_visable(&info->map[unit->cell_index])){
+			if(vision_map->at(unit->cell_index)
+				&& (client->on_screen(&info->map[unit->cell_index]))){
+
 				for(auto &sprite : unit->sprites){
 					sprite.setPosition( client->perspective(
 						info->map[unit->cell_index].pos + sf::Vector2f{2, -8}));
@@ -1086,8 +1091,6 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 		this->path_progress -= 1;
 
 		if(!this->path.empty()){
-			this->open_vision(info, player_index);
-
 			uint32_t recalculated_depth = 8;
 			std::list<uint32_t> recalculated_path;
 
@@ -1105,6 +1108,7 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 
 			this->path = recalculated_path;
 		}
+		this->open_vision(info, player_index);
 	}
 }
 
