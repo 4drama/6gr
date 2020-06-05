@@ -8,9 +8,12 @@ SRC_DIR= ./src/
 OBJ_DIR= ./obj/
 BIN_DIR= ./bin/
 
-all: map client control gui main
+all: map client control gui main unit
 	$(CC) $(LIBFLAGS) $(OBJ_DIR)main.o $(OBJ_DIR)map.o $(OBJ_DIR)control.o \
-	$(OBJ_DIR)gui.o $(OBJ_DIR)client.o -o $(BIN_DIR)game.exe $(LDFLAGS)
+	$(OBJ_DIR)gui.o $(OBJ_DIR)client.o $(OBJ_DIR)unit.o -o $(BIN_DIR)game.exe $(LDFLAGS)
+
+unit:
+	$(CC) $(CFLAGS) $(SRC_DIR)unit.cpp -o $(OBJ_DIR)unit.o
 
 map:
 	$(CC) $(CFLAGS) $(SRC_DIR)map.cpp -o $(OBJ_DIR)map.o

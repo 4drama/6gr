@@ -9,7 +9,7 @@ enum class terrain_en;
 struct object;
 struct terrain;
 class cell;
-struct unit;
+class unit;
 struct player;
 struct game_info;
 
@@ -52,7 +52,7 @@ enum class terrain_en{
 	END = LAST + 1
 };
 
-
+#include "unit.hpp"
 
 struct object{
 	enum class texture_type{
@@ -109,40 +109,6 @@ public:
 	std::vector<bool> player_visible;
 };
 
-struct unit : std::enable_shared_from_this<unit>{
-	enum class unit_type{
-		CARAVAN = 0,
-
-		SIZE = 1
-	};
-	static std::vector<sf::Texture> textures;
-	static void fill_textures();
-
-	uint32_t cell_index;
-	std::vector<sf::Sprite> sprites;
-
-	uint32_t vision_range = 0;
-	std::vector<uint32_t> vision_indeces{};
-
-	float speed[(int)terrain_en::END];
-	float speed_mod = 0;
-	std::list<uint32_t> path;
-	float path_progress = 0;
-
-	enum class weight_level_type{
-		LIGHT,
-		LOADED,
-		OVERLOADED
-	};
-	static std::shared_ptr<unit> create_caravan(weight_level_type weight, uint32_t cell_index);
-
-	void open_vision(game_info *info, uint32_t player_index);
-	void update(game_info *info, uint32_t player_index, float time);
-
-private:
-	void unit_update_move(game_info *info, uint32_t player_index, float time);
-};
-
 struct player_info{
 	uint32_t player;
 
@@ -164,6 +130,10 @@ struct player_info{
 
 	std::list<uint32_t> get_vision_players_indeces() const;
 	uint32_t get_index() const;
+
+	void war(game_info *info, uint32_t player);
+private:
+	void remove_from_all(uint32_t player);
 };
 
 struct player{
@@ -196,6 +166,8 @@ struct game_info{
 
 	cell& get_cell(uint32_t index);
 	void update(float time);
+
+	void announce_war(uint32_t player_index_1, uint32_t player_index_2);
 };
 
 std::vector<cell> generate_world(uint32_t size);
@@ -224,5 +196,8 @@ std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_i
 sf::Sprite get_sprite_out_of_view(terrain_en terr, sf::Vector2f pos);
 void create_transform_shape(const client *client, sf::Vector2f pos,
 	sf::Vertex *transform_shape, sf::Color color);
+
+std::vector<uint32_t> open_adjacent(game_info *info, uint32_t player_index,
+	uint32_t cell_index, uint32_t depth);
 
 #endif

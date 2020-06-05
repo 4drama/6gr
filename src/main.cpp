@@ -18,6 +18,7 @@ int main(){
 
 	uint32_t player_index = add_player(&info, "Player 1");
 	uint32_t player_index2 = add_player(&info, "Player 2");
+	info.announce_war(player_index, player_index2);
 
 	std::vector<std::shared_ptr<client> > clients{};
 	clients.emplace_back(std::make_shared<client>(&info, 1400, 900, player_index));

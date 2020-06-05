@@ -14,7 +14,6 @@ sf::Vector2f cell::offset[(int)cardinal_directions_t::END] = {};
 sf::Vertex cell::shape[7] = {};
 uint32_t terrain::gen_rate[(int)terrain_en::END][(int)terrain_en::END] = {};
 std::vector<sf::Texture> object::textures{};
-std::vector<sf::Texture> unit::textures{};
 
 cardinal_directions_t against(cardinal_directions_t dir){
 	using cd_t = cardinal_directions_t;
@@ -462,15 +461,15 @@ float get_path_weight_f(std::vector<cell> &map, uint32_t target_cell_index,
 	std::shared_ptr<unit> unit, uint32_t player_index, std::vector<bool> *vision_map){
 	terrain_en ter_type = map[target_cell_index].ter.type;
 	if(map[target_cell_index].player_visible[player_index] == true){
-		if(unit->speed[(int)ter_type] == 0){
+		if(unit->get_speed(ter_type) == 0){
 			return INFINITY;
 		} else if((map[target_cell_index].unit != nullptr)
 			&& vision_map->at(target_cell_index)){
 			return 99999999;
 		}
-		return 1 / unit->speed[(int)ter_type];
+		return 1 / unit->get_speed(ter_type);
 	} else
-		return 1.5 / unit->speed[(int)terrain_en::PLAIN];
+		return 1.5 / unit->get_speed(terrain_en::PLAIN);
 }
 
 void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
@@ -791,7 +790,7 @@ game_info::game_info() : speed(X1), pause(true){
 	cell::set_side_size(side_size);
 
 	map = generate_world(40u);
-	unit::fill_textures();
+//	unit::fill_textures();
 }
 
 player_info::player_info(game_info *info, uint32_t player_) : player(player_){
@@ -829,6 +828,17 @@ uint32_t player_info::get_index() const{
 	return this->player;
 }
 
+void player_info::remove_from_all(uint32_t player){
+	alliance_players.remove(player);
+	enemy_players.remove(player);
+}
+
+void player_info::war(game_info *info, uint32_t player){
+	this->remove_from_all(player);
+	this->enemy_players.push_back(player);
+	this->update(info);
+}
+
 player::player(game_info *info, uint32_t player_index)
 	: info(std::make_shared<player_info>(info, player_index)){
 }
@@ -852,6 +862,11 @@ uint32_t add_player(game_info *info, std::string name){
 		[&players_count](cell &cell){ cell.player_visible.emplace_back(false); });
 
 	return player_index;
+}
+
+void game_info::announce_war(uint32_t player_index_1, uint32_t player_index_2){
+	players.at(player_index_1).info->war(this, player_index_2);
+	players.at(player_index_2).info->war(this, player_index_1);
 }
 
 namespace{
@@ -901,7 +916,9 @@ std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
 	return dst;
 }
 
-std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
+}
+
+std::vector<uint32_t> open_adjacent(game_info *info, uint32_t player_index,
 	uint32_t cell_index, uint32_t depth){
 	using cd_t = cardinal_directions_t;
 
@@ -926,13 +943,6 @@ std::vector<uint32_t> open_adjacent_f(game_info *info, uint32_t player_index,
 	return dst;
 }
 
-}
-
-void unit::open_vision(game_info *info, uint32_t player_index){
-	this->vision_indeces = open_adjacent_f(info, player_index,
-		this->cell_index, this->vision_range);
-}
-
 namespace{
 
 uint32_t choose_spawn_cell_f(game_info *info){
@@ -951,90 +961,18 @@ void player_respawn(game_info *info, client *client){
 	if(client != nullptr)
 		client->set_camera(-info->map[spawn_cell_index].pos);
 
-	std::shared_ptr<unit> caravan =
-		unit::create_caravan(unit::weight_level_type::LIGHT, spawn_cell_index);
-	info->map[spawn_cell_index].unit = caravan;
+/*	std::shared_ptr<unit> caravan =
+		unit::create_caravan(unit::weight_level_type::LIGHT, spawn_cell_index);*/
 
-	info->players[player_index].units.emplace_back(caravan);
+	std::shared_ptr<unit> mech = mech::create(spawn_cell_index);
+
+	info->map[spawn_cell_index].unit = mech;
+	info->players[player_index].units.emplace_back(mech);
 
 	for(auto &unit : info->players[player_index].units)
 		unit->open_vision(info, player_index);
 }
 
-void unit::fill_textures(){
-	unit::textures.resize((int)unit::unit_type::SIZE);
-
-	unit::textures[(int)unit::unit_type::CARAVAN].loadFromFile("./../data/caravan_60x60x8.png");
-}
-
-namespace{
-
-sf::Sprite create_sprite_f(sf::Texture *texture,
-	int width, int height, int column, int raw){
-
-	sf::Sprite frame;
-
-	sf::IntRect rectangle{0 + width * column, 0 + height * raw,
-		 width, height};
-
-	frame.setTexture(*texture);
-	frame.setTextureRect(rectangle);
-	frame.setOrigin(width / 2, height);
-	frame.setScale (0.2, -0.2);
-	return frame;
-}
-
-}
-
-std::shared_ptr<unit> unit::create_caravan(unit::weight_level_type weight,
-	uint32_t cell_index_){
-
-	unit result{};
-	result.vision_range = 3;
-	result.cell_index = cell_index_;
-	result.sprites.emplace_back(
-		create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-		60, 60, 0, 0));
-
-
-
-	switch(weight){
-		case unit::weight_level_type::LIGHT :
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-				60, 60, 2, 0));
-			result.speed_mod = (float)2 / 10000;
-		break;
-		case unit::weight_level_type::LOADED :
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-				60, 60, 1, 0));
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-				60, 60, 0, 1));
-			result.speed_mod = (float)1 / 10000;
-		break;
-		case unit::weight_level_type::OVERLOADED :
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-				60, 60, 1, 0));
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-				60, 60, 0, 1));
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[(int)unit::unit_type::CARAVAN],
-				60, 60, 1, 1));
-			result.speed_mod = (float)0.5 / 10000;
-		break;
-	}
-
-	result.speed[(int)terrain_en::RIVER] = 0;
-	result.speed[(int)terrain_en::MOUNTAIN] = 0.5;
-	result.speed[(int)terrain_en::PLAIN] = 2;
-	result.speed[(int)terrain_en::PALM] = 2;
-
-	return std::make_shared<unit>(result);
-}
 
 void draw_path(game_info *info, client* client, std::list<uint32_t> path,
 	float progress){
@@ -1124,54 +1062,6 @@ void units_draw_paths(game_info *info, client *client){
 
 cell& game_info::get_cell(uint32_t index){
 	return this->map[index];
-}
-
-void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
-	if(!this->path.size())
-		return;
-
-	terrain_en terr_type = info->get_cell(this->path.front()).ter.type;
-	this->path_progress += time * this->speed_mod * this->speed[(int)terr_type];
-
-	if((this->cell_index == this->path.back())
-		|| (info->get_cell(this->path.front()).unit != nullptr) ){
-		this->path.clear();
-	}
-
-	if(this->path_progress > 1){
-		info->map[this->cell_index].unit = nullptr;
-		this->cell_index = this->path.front();
-		info->map[this->cell_index].unit = shared_from_this();
-		this->path.pop_front();
-
-		this->path_progress -= 1;
-
-		if(!this->path.empty()){
-			uint32_t recalculated_depth = 8;
-			std::list<uint32_t> recalculated_path;
-
-			auto it = this->path.begin();
-			if(this->path.size() <= recalculated_depth)
-				it = --this->path.end();
-			else
-				std::advance(it, recalculated_depth);
-
-			recalculated_path = path_find(info, this->cell_index,
-				*it, shared_from_this(), player_index, false);
-
-			recalculated_path.splice(recalculated_path.end(),
-				this->path, it, this->path.end());
-
-			this->path = recalculated_path;
-		}
-		this->open_vision(info, player_index);
-	}
-}
-
-
-void unit::update(game_info *info, uint32_t player_index, float time){
-
-	this->unit_update_move(info, player_index, time);
 }
 
 void game_info::update(float time){
