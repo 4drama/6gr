@@ -249,6 +249,14 @@ void client::draw(game_info *info, float time){
 		this->show_cursor_point();
 		units_draw_paths(info, this);
 
+		const uint32_t player_id = this->player->player;
+		const std::vector< player::selected_unit_type > &selected_units =
+			info->players[player_id].selected_units;
+		if((selected_units.size() == 1) && (selected_units.front().first == player_id)){
+			auto unit_ptr = selected_units.front().second.lock();
+			unit_ptr->draw_gui(info, this);
+		}
+
 		this->window.display();
 	}
 }

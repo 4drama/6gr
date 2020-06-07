@@ -503,7 +503,7 @@ void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
 
 bool infinity_check(game_info *info, std::shared_ptr<unit> unit, uint32_t point){
 	terrain_en ter_type = info->get_cell(point).ter.type;
-	if(unit->speed[(int)ter_type] == 0)
+	if(unit->get_speed(ter_type) == 0)
 		return true;
 	else
 		return false;

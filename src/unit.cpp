@@ -2,6 +2,24 @@
 
 std::map<std::string, sf::Texture> unit::textures{};
 
+item::item(std::string name_, float delay_)
+	: name(name_), delay(delay_){
+}
+
+bool item::get_ready() const noexcept{
+	bool status = false;
+	if(this->get_power_status() && (this->get_delay() >= 1) && this->has_ammo()){
+		status = true;
+	}
+	return status;
+}
+
+void item::update(float time){
+	if(this->curr_delay < this->delay){
+		this->curr_delay += time;
+	}
+}
+
 namespace{
 
 sf::Sprite create_sprite_f(sf::Texture *texture,
@@ -106,7 +124,7 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 		return;
 
 	terrain_en terr_type = info->get_cell(this->path.front()).ter.type;
-	this->path_progress += time * this->speed_mod * this->speed[(int)terr_type];
+	this->path_progress += time * this->get_speed(terr_type);
 
 	if((this->cell_index == this->path.back())
 		|| (info->get_cell(this->path.front()).unit != nullptr) ){
