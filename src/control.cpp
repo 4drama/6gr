@@ -42,6 +42,14 @@ void select_units(game_info *info, uint32_t player_index){
 		info->players[player_index].selected_units.emplace_back(curr_unit);
 	}
 }
+
+bool select_item(game_info *info, uint32_t player_index, client* client){
+	if(info->players[player_index].selected_units.size() == 1){
+		auto unit_ptr = info->players[player_index].selected_units.front().second.lock();
+		return unit_ptr->interact_gui(info, client);
+	}
+	return false;
+}
 /*
 void event_handler(game_info *info, float time, client *client){
 	client->control_update(info, time);

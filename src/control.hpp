@@ -13,5 +13,6 @@ void speed_down(game_info *info);
 void set_speed(game_info *info, game_info::speed_e speed);
 void select_cell(game_info *info, uint32_t player_index, client* client);
 void select_units(game_info *info, uint32_t player_index);
+bool select_item(game_info *info, uint32_t player_index, client* client);
 
 #endif

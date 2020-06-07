@@ -2,6 +2,7 @@
 
 #include "control.hpp"
 #include "gui.hpp"
+#include "unit.hpp"
 
 client::client(game_info *info, int width_, int height_, uint32_t player_index)
 	: Width(width_), Height(height_), draw_cells(false), zoom_manager(0),
@@ -167,8 +168,10 @@ void client::control_update(game_info *info, float time){
 			event.mouseButton.button == sf::Mouse::Button::Left){
 			if(left_click_cd <= 0){
 				if(!gui::instance().gui_interact(info, this)){
-					select_cell(info, this->player->get_index(), this);
-					select_units(info, this->player->get_index());
+					if(!select_item(info, this->player->get_index(), this)){
+						select_cell(info, this->player->get_index(), this);
+						select_units(info, this->player->get_index());
+					}
 				}
 				left_click_cd = 30;
 			}
@@ -334,6 +337,12 @@ void client::draw_cell_border(sf::Vertex *transform_shape) const {
 void client::draw_buttons(std::vector< button > *buttons) const{
 	for(auto &but : *buttons){
 		this->window.draw(but.sprites[but.state]);
+	}
+}
+
+void client::draw_item_shape(const item_shape &shape) const{
+	for(auto &sprite : shape.elements){
+		this->window.draw(sprite);
 	}
 }
 

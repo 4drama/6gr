@@ -1,9 +1,74 @@
 #include "unit.hpp"
 
+#include <iostream>
+
+sf::Texture item::texture{};
+std::map<std::string, sf::Sprite> item::sprites;
+
 std::map<std::string, sf::Texture> unit::textures{};
+
+bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos){
+	sf::FloatRect rect = sprite.getGlobalBounds();
+
+	if((rect.left <= pos.x) && ((rect.left + rect.width) >= pos.x) &&
+		(rect.top <= pos.y) && ((rect.top + rect.height) >= pos.y))
+		return true;
+	else
+		return false;
+}
+
+void item::load_sprites(){
+	item::texture.loadFromFile("./../data/item_button.png");
+
+	sprites["active_button"] = sf::Sprite(item::texture,
+		sf::IntRect(0, 0, 180, 23));
+	sprites["active_button"].setPosition(34, 0);
+
+	sprites["inactive_button"] = sf::Sprite(item::texture,
+		sf::IntRect(0, 23, 180, 23));
+	sprites["inactive_button"].setPosition(34, 0);
+
+	sprites["power_off"] = sf::Sprite(item::texture,
+		sf::IntRect(197, 23, 15, 35));
+	sprites["power_off"].setPosition(0, 0);
+
+	sprites["power_on"] = sf::Sprite(item::texture,
+		sf::IntRect(212, 23, 15, 35));
+	sprites["power_on"].setPosition(0, 0);
+
+	sprites["active_hotkey_screen"] = sf::Sprite(item::texture,
+		sf::IntRect(180, 0, 15, 23));
+	sprites["active_hotkey_screen"].setPosition(17, 0);
+
+	sprites["inactive_hotkey_screen"] = sf::Sprite(item::texture,
+		sf::IntRect(180, 23, 15, 23));
+	sprites["inactive_hotkey_screen"].setPosition(17, 0);
+
+	sprites["active_delay_screen"] = sf::Sprite(item::texture,
+		sf::IntRect(0, 46, 197, 10));
+	sprites["active_delay_screen"].setPosition(17, -25);
+
+	sprites["inactive_delay_screen"] = sf::Sprite(item::texture,
+		sf::IntRect(0, 56, 197, 10));
+	sprites["inactive_delay_screen"].setPosition(17, -25);
+
+	sprites["progress_bar_ready"] = sf::Sprite(item::texture,
+		sf::IntRect(195, 0, 35, 6));
+	sprites["progress_bar_ready"].setPosition(22, -27);
+
+	sprites["progress_bar_not_ready"] = sf::Sprite(item::texture,
+		sf::IntRect(195, 6, 35, 6));
+	sprites["progress_bar_not_ready"].setPosition(22, -27);
+
+	sprites["progress_bar_reload_ready"] = sf::Sprite(item::texture,
+		sf::IntRect(195, 12, 35, 6));
+	sprites["progress_bar_reload_ready"].setPosition(22, -27);
+}
 
 item::item(std::string name_, float delay_)
 	: name(name_), delay(delay_){
+	if(item::sprites.empty())
+		item::load_sprites();
 }
 
 bool item::get_ready() const noexcept{
@@ -19,6 +84,66 @@ void item::update(float time){
 		this->curr_delay += time;
 	}
 }
+
+item_shape item::get_draw_shape(client *client, const sf::Vector2f& position) const{
+	float scale = client->get_view_scale();
+
+	for(auto &sprite : item::sprites){
+		sprite.second.setScale (scale, -scale);
+	}
+
+	item_shape shape{};
+	if(this->get_power_status()){
+		shape.elements.push_back(item::sprites["power_on"]);
+		shape.elements.push_back(item::sprites["active_hotkey_screen"]);
+		shape.elements.push_back(item::sprites["active_delay_screen"]);
+		if(this->get_ready()){
+			shape.elements.push_back(item::sprites["active_button"]);
+			for(uint32_t x = 0; x < 190; x += 38){
+				sf::Sprite sprite(item::sprites["progress_bar_ready"]);
+				sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
+				shape.elements.push_back(sprite);
+			}
+		} else {
+			shape.elements.push_back(item::sprites["inactive_button"]);
+			float delay_rate = this->get_delay();
+			float progress = 0;
+			for(uint32_t x = 0; x < 190; x += 38){
+				progress += 0.2;
+				if(progress < delay_rate){
+					sf::Sprite sprite(item::sprites["progress_bar_reload_ready"]);
+					sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
+					shape.elements.push_back(sprite);
+				} else {
+					sf::Sprite sprite(item::sprites["progress_bar_not_ready"]);
+					sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
+					shape.elements.push_back(sprite);
+				}
+			}
+		}
+	} else {
+		shape.elements.push_back(item::sprites["power_off"]);
+		shape.elements.push_back(item::sprites["inactive_hotkey_screen"]);
+		shape.elements.push_back(item::sprites["inactive_button"]);
+		shape.elements.push_back(item::sprites["inactive_delay_screen"]);
+	}
+
+	for(auto& sprite : shape.elements){
+		sprite.setPosition(sprite.getPosition() * scale + position * scale);
+	}
+	return shape;
+}
+
+/*void item::draw_button(game_info *info, client *client,
+	sf::Vector2f position) const noexcept{
+
+
+}
+
+void item::push_button(game_info *info, client *client,
+	sf::Vector2f but_position, sf::Vector2f click_position) const noexcept{
+
+}*/
 
 namespace{
 
@@ -98,7 +223,7 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 }
 
 mech::mech(uint32_t cell_index_)
-	: unit(cell_index_, 4){
+	: unit(cell_index_, 4), weapon("Rocket", 15000){
 
 	std::string path("./../data/");
 	std::string filename("mech_60x60x6.png");
@@ -112,6 +237,25 @@ mech::mech(uint32_t cell_index_)
 	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
 	this->speed[(int)terrain_en::PLAIN] = 2;
 	this->speed[(int)terrain_en::PALM] = 2;
+}
+
+void mech::draw_gui(game_info *info, client *client){
+	float scale = client->get_view_scale();
+	auto shape  = weapon.get_draw_shape(client, sf::Vector2f{-100, -200});
+	client->draw_item_shape(shape);
+}
+
+bool mech::interact_gui(game_info *info, client *client){
+	float scale = client->get_view_scale();
+	sf::Vector2f pos = client->mouse_on_map();
+	auto shape = this->weapon.get_draw_shape(client, sf::Vector2f{-100, -200});
+	for(auto &sprite : shape.elements){
+		if(is_inside_sprite(sprite, pos)){
+			std::cerr << "click" << std::endl;
+			return true;
+		}
+	}
+	return false;
 }
 
 void unit::open_vision(game_info *info, uint32_t player_index){
@@ -163,6 +307,10 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 
 
 void unit::update(game_info *info, uint32_t player_index, float time){
-
 	this->unit_update_move(info, player_index, time);
+	this->update_v(info, player_index, time);
+}
+
+void mech::update_v(game_info *info, uint32_t player_index, float time){
+	weapon.update(time);
 }

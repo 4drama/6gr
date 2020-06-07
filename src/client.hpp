@@ -13,6 +13,8 @@ class client;
 #include <functional>
 #include <memory>
 
+class item_shape;
+
 class client{
 public:
 	client(game_info *info, int width_, int height_, uint32_t player_index);
@@ -48,6 +50,7 @@ public:
 	void draw_label(sf::RectangleShape *label) const;
 	void draw_buttons(std::vector< button > *buttons) const;
 	void draw_cell_border(sf::Vertex *transform_shape) const;
+	void draw_item_shape(const item_shape &shape) const;
 	void show_cursor_point();
 
 	std::vector<uint32_t> get_vision_indeces(game_info *info) const;

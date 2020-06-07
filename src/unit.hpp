@@ -9,8 +9,21 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <utility>
+
+bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos);
+
+struct item_shape{
+	std::list<sf::Sprite> elements;
+};
 
 class item{
+	static sf::Texture texture;
+	static std::map<std::string, sf::Sprite> sprites;
+
+	static void load_sprites();
+/*	static inline const sf::Sprite& get_sprite(std::string name) const noexcept{
+		return sprites[name]};*/
 public:
 	item(std::string name, float delay);
 
@@ -26,9 +39,14 @@ public:
 	inline float get_delay() const noexcept { return curr_delay / delay;};
 	bool get_ready() const noexcept;
 
-	inline bool has_ammo() const noexcept {return true;};
+	inline bool has_ammo() const noexcept { return true;};
 
 	void update(float time);
+
+	item_shape get_draw_shape(client *client, const sf::Vector2f& position) const;
+/*	void draw_button(game_info *info, client *client, sf::Vector2f position) const noexcept;
+	void push_button(game_info *info, client *client,
+		sf::Vector2f but_position, sf::Vector2f click_position) const noexcept;*/
 private:
 	std::string name;
 	sf::Keyboard::Key key = sf::Keyboard::Unknown;
@@ -36,7 +54,7 @@ private:
 	float curr_delay = 0;
 	float delay;
 
-	bool power_status = false;
+	bool power_status = true;
 };
 
 struct unit : std::enable_shared_from_this<unit>{
@@ -66,9 +84,11 @@ struct unit : std::enable_shared_from_this<unit>{
 
 	inline virtual float get_speed(terrain_en ter_type) const noexcept {return 0;};
 	virtual void draw_gui(game_info *info, client *client){return ;};
+	virtual bool interact_gui(game_info *info, client *client){return false;};
 
 private:
 	void unit_update_move(game_info *info, uint32_t player_index, float time);
+	inline virtual void update_v(game_info *info, uint32_t player_index, float time){return ;};
 };
 
 class mech : public unit{
@@ -80,8 +100,14 @@ public:
 
 	inline float get_speed(terrain_en ter_type) const noexcept override
 		{return this->speed[(int)ter_type] * ((float)2 / 10000);};
+
+	void draw_gui(game_info *info, client *client);
+	bool interact_gui(game_info *info, client *client);
 private:
 	float speed[(int)terrain_en::END];
+	item weapon;
+
+	void update_v(game_info *info, uint32_t player_index, float time);
 };
 
 #endif
