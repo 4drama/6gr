@@ -50,4 +50,13 @@ private:
 	void update(game_info *info, client *client);
 };
 
+inline const sf::Font& get_font(){
+	static sf::Font *font = nullptr;
+	if(!font){
+		font = new sf::Font{};
+		font->loadFromFile("./../data/times_new_roman.ttf");
+	}
+	return *font;
+}
+
 #endif

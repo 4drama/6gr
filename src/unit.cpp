@@ -66,9 +66,10 @@ void item::load_sprites(){
 }
 
 item::item(std::string name_, float delay_)
-	: name(name_), delay(delay_){
+	: name(name_), delay(delay_), name_text(name, get_font(), 22){
 	if(item::sprites.empty())
 		item::load_sprites();
+	this->name_text.setPosition(39, 5);
 }
 
 bool item::get_ready() const noexcept{
@@ -93,17 +94,28 @@ item_shape item::get_draw_shape(client *client, const sf::Vector2f& position) co
 	}
 
 	item_shape shape{};
+	auto add_text = [scale, &shape](sf::Vector2f pos, sf::Text *text,
+		const sf::Color &color = sf::Color::White) {
+
+		text->setScale(scale, -scale);
+		text->setPosition(pos);
+		text->setColor(color);
+		shape.text_elements.push_back(text);
+	};
+
 	if(this->get_power_status()){
 		shape.elements.push_back(item::sprites["power_on"]);
 		shape.elements.push_back(item::sprites["active_hotkey_screen"]);
 		shape.elements.push_back(item::sprites["active_delay_screen"]);
+		shape.elements.push_back(item::sprites["active_button"]);
+
 		if(this->get_ready()){
-			shape.elements.push_back(item::sprites["active_button"]);
 			for(uint32_t x = 0; x < 190; x += 38){
 				sf::Sprite sprite(item::sprites["progress_bar_ready"]);
 				sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
 				shape.elements.push_back(sprite);
 			}
+			add_text(sf::Vector2f(39, 5), &this->name_text);
 		} else {
 			shape.elements.push_back(item::sprites["inactive_button"]);
 			float delay_rate = this->get_delay();
@@ -120,16 +132,23 @@ item_shape item::get_draw_shape(client *client, const sf::Vector2f& position) co
 					shape.elements.push_back(sprite);
 				}
 			}
+			add_text(sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136));
 		}
 	} else {
 		shape.elements.push_back(item::sprites["power_off"]);
 		shape.elements.push_back(item::sprites["inactive_hotkey_screen"]);
 		shape.elements.push_back(item::sprites["inactive_button"]);
 		shape.elements.push_back(item::sprites["inactive_delay_screen"]);
+
+		add_text(sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136));
 	}
 
 	for(auto& sprite : shape.elements){
 		sprite.setPosition(sprite.getPosition() * scale + position * scale);
+	}
+	for(auto& text : shape.text_elements){
+		text->setPosition(text->getPosition() * scale + position * scale);
+	//	text->setOrigin(text->getOrigin() * scale);
 	}
 	return shape;
 }
@@ -223,7 +242,8 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 }
 
 mech::mech(uint32_t cell_index_)
-	: unit(cell_index_, 4), weapon("Rocket", 15000){
+	: unit(cell_index_, 4), weapon("Rocket", 15000),
+	energy_text("energy_value", get_font(), 22){
 
 	std::string path("./../data/");
 	std::string filename("mech_60x60x6.png");
@@ -239,10 +259,69 @@ mech::mech(uint32_t cell_index_)
 	this->speed[(int)terrain_en::PALM] = 2;
 }
 
-void mech::draw_gui(game_info *info, client *client){
+item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) const{
 	float scale = client->get_view_scale();
-	auto shape  = weapon.get_draw_shape(client, sf::Vector2f{-100, -200});
-	client->draw_item_shape(shape);
+
+	sf::Vector2f corner = sf::Vector2f(
+		-client->get_view_width(), client->get_view_height()) / 2.0f;
+
+
+	item_shape shape{};
+	auto add_rectangle = [&scale, &shape, &corner](sf::Vector2f size,
+		sf::Vector2f offset, sf::Vector2f pos, sf::Color color = sf::Color::White){
+
+		sf::RectangleShape rect(size * scale);
+		rect.setPosition(corner + (offset + pos) * scale);
+		rect.setFillColor(color);
+		shape.bar_elements.emplace_back(rect);
+	};
+
+	auto add_text = [&scale, &shape, &corner](sf::Text *text, sf::Vector2f offset,
+		sf::Vector2f pos, std::string str, sf::Color color = sf::Color::White){
+
+		text->setScale(scale, -scale);
+		text->setPosition(corner + (offset + pos) * scale);
+		text->setColor(color);
+		text->setString(str);
+		shape.text_elements.emplace_back(text);
+	};
+
+	auto add_bar = [&scale, &shape, &corner, &add_rectangle, &add_text](
+		sf::Vector2f offset, float max_value, float curr_value,
+		sf::Text *text_value, sf::Color value_color){
+
+		add_rectangle(sf::Vector2f(50, 300), offset, sf::Vector2f(0, 0),
+			sf::Color(80, 100, 125));
+		add_rectangle(sf::Vector2f(50, 300 * (curr_value / max_value)), offset,
+			sf::Vector2f(0, 0),	value_color);
+		add_rectangle(sf::Vector2f(2, 300), offset, sf::Vector2f(50, 0));
+		add_rectangle(sf::Vector2f(65, 2), offset, sf::Vector2f(0, 300));
+		add_rectangle(sf::Vector2f(52, 2), offset, sf::Vector2f(0, -2));
+
+		for(float point = -1; point < -1 + 60 * 6; point += 60){
+			add_rectangle(sf::Vector2f(16, 2), offset, sf::Vector2f(34, point));
+		}
+
+		for(float point = 30; point < 30 + 60 * 5; point += 60){
+			add_rectangle(sf::Vector2f(8, 2), offset, sf::Vector2f(42, point));
+		}
+
+		add_text(text_value, offset, sf::Vector2f(20, 330),
+			std::to_string((int)curr_value));
+	};
+
+	add_bar(sf::Vector2f(20, 20), this->energy_capacity, this->current_energy,
+		 &this->energy_text, sf::Color(46, 108, 43));
+
+	return shape;
+}
+
+void mech::draw_gui(game_info *info, client *client){
+//	float scale = client->get_view_scale();
+	auto item_shape = weapon.get_draw_shape(client, sf::Vector2f{-100, -200});
+	auto status_shape = this->get_status_shape(client, sf::Vector2f{0, 0});
+	client->draw_item_shape(item_shape);
+	client->draw_item_shape(status_shape);
 }
 
 bool mech::interact_gui(game_info *info, client *client){

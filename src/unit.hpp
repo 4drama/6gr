@@ -15,6 +15,9 @@ bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos);
 
 struct item_shape{
 	std::list<sf::Sprite> elements;
+	std::list<sf::Text*> text_elements;
+
+	std::list<sf::RectangleShape> bar_elements;
 };
 
 class item{
@@ -50,6 +53,7 @@ public:
 private:
 	std::string name;
 	sf::Keyboard::Key key = sf::Keyboard::Unknown;
+	mutable sf::Text name_text;
 
 	float curr_delay = 0;
 	float delay;
@@ -104,9 +108,23 @@ public:
 	void draw_gui(game_info *info, client *client);
 	bool interact_gui(game_info *info, client *client);
 private:
+	item *waiting_confirm = nullptr;
+
+	float current_energy = 75;
+	float energy_capacity = 100;
+	mutable sf::Text energy_text;
+
+	float current_heat = 0;
+	float heat_capacity = 300;
+
+	std::list<item> left_arm;
+	std::list<item> torso;
+	std::list<item> right_arm;
+
 	float speed[(int)terrain_en::END];
 	item weapon;
 
+	item_shape get_status_shape(client *client, const sf::Vector2f& position) const;
 	void update_v(game_info *info, uint32_t player_index, float time);
 };
 
