@@ -11,14 +11,49 @@
 #include <string>
 #include <utility>
 
+#include <iostream>
+
 bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos);
+
+class mech;
 
 struct item_shape{
 	std::list<sf::Sprite> elements;
 	std::list<sf::Text*> text_elements;
 
 	std::list<sf::RectangleShape> bar_elements;
+
+	inline item_shape& operator=(const item_shape& right){
+		if (this == &right) {
+            return *this;
+        }
+		this->elements = right.elements;
+		this->text_elements = right.text_elements;
+		this->bar_elements = right.bar_elements;
+
+		return *this;
+	}
 };
+
+inline const item_shape operator+(const item_shape& left, const item_shape& right){
+	item_shape shape(left);
+	auto copy_to = [](auto &from, auto &to){
+		for(auto &el : from){
+			to.emplace_back(el);
+		}
+	};
+
+	copy_to(right.elements, shape.elements);
+	copy_to(right.text_elements, shape.text_elements);
+	copy_to(right.bar_elements, shape.bar_elements);
+
+    return shape;
+}
+
+inline item_shape& operator+=(item_shape& left, const item_shape& right){
+	left = left + right;
+    return left;
+}
 
 class item{
 	static sf::Texture texture;
@@ -40,13 +75,14 @@ public:
 	inline void set_hotkey(sf::Keyboard::Key key_) noexcept { this->key = key_;};
 
 	inline float get_delay() const noexcept { return curr_delay / delay;};
-	bool get_ready() const noexcept;
+	bool get_ready(const mech* owner) const noexcept;
 
-	inline bool has_ammo() const noexcept { return true;};
+	inline virtual bool has_resources(const mech* owner) const noexcept { return true;};
 
-	void update(float time);
+	virtual void update(mech* owner, float time);
 
-	item_shape get_draw_shape(client *client, const sf::Vector2f& position) const;
+	virtual item_shape get_draw_shape(const mech* owner, client *client,
+		const sf::Vector2f& position) const;
 /*	void draw_button(game_info *info, client *client, sf::Vector2f position) const noexcept;
 	void push_button(game_info *info, client *client,
 		sf::Vector2f but_position, sf::Vector2f click_position) const noexcept;*/
@@ -61,6 +97,12 @@ private:
 	bool power_status = true;
 };
 
+class legs : public item{
+public:
+
+private:
+};
+
 struct unit : std::enable_shared_from_this<unit>{
 	static std::map<std::string, sf::Texture> textures;
 
@@ -72,14 +114,6 @@ struct unit : std::enable_shared_from_this<unit>{
 
 	std::list<uint32_t> path;
 	float path_progress = 0;
-
-/*	enum class weight_level_type{
-		LIGHT,
-		LOADED,
-		OVERLOADED
-	};
-	static std::shared_ptr<unit> create_caravan(weight_level_type weight, uint32_t cell_index);
-*/
 
 	unit(uint32_t cell_index, uint32_t vision_range);
 
@@ -114,18 +148,20 @@ private:
 	float energy_capacity = 100;
 	mutable sf::Text energy_text;
 
-	float current_heat = 0;
+	float current_heat = 50;
 	float heat_capacity = 300;
+	mutable sf::Text heat_text;
 
-	std::list<item> left_arm;
-	std::list<item> torso;
-	std::list<item> right_arm;
+	std::list<std::shared_ptr<item>> left_arm;
+	std::list<std::shared_ptr<item>> torso;
+	std::list<std::shared_ptr<item>> right_arm;
 
 	float speed[(int)terrain_en::END];
-	item weapon;
 
 	item_shape get_status_shape(client *client, const sf::Vector2f& position) const;
 	void update_v(game_info *info, uint32_t player_index, float time);
+
+	item_shape prepare_shape(client *client) const;
 };
 
 #endif

@@ -72,21 +72,22 @@ item::item(std::string name_, float delay_)
 	this->name_text.setPosition(39, 5);
 }
 
-bool item::get_ready() const noexcept{
+bool item::get_ready(const mech* owner) const noexcept{
 	bool status = false;
-	if(this->get_power_status() && (this->get_delay() >= 1) && this->has_ammo()){
+	if(this->get_power_status() && (this->get_delay() >= 1) && this->has_resources(owner)){
 		status = true;
 	}
 	return status;
 }
 
-void item::update(float time){
+void item::update(mech* owner, float time){
 	if(this->curr_delay < this->delay){
 		this->curr_delay += time;
 	}
 }
 
-item_shape item::get_draw_shape(client *client, const sf::Vector2f& position) const{
+item_shape item::get_draw_shape(const mech* owner, client *client,
+	const sf::Vector2f& position) const{
 	float scale = client->get_view_scale();
 
 	for(auto &sprite : item::sprites){
@@ -109,7 +110,7 @@ item_shape item::get_draw_shape(client *client, const sf::Vector2f& position) co
 		shape.elements.push_back(item::sprites["active_delay_screen"]);
 		shape.elements.push_back(item::sprites["active_button"]);
 
-		if(this->get_ready()){
+		if(this->get_ready(owner)){
 			for(uint32_t x = 0; x < 190; x += 38){
 				sf::Sprite sprite(item::sprites["progress_bar_ready"]);
 				sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
@@ -148,21 +149,9 @@ item_shape item::get_draw_shape(client *client, const sf::Vector2f& position) co
 	}
 	for(auto& text : shape.text_elements){
 		text->setPosition(text->getPosition() * scale + position * scale);
-	//	text->setOrigin(text->getOrigin() * scale);
 	}
 	return shape;
 }
-
-/*void item::draw_button(game_info *info, client *client,
-	sf::Vector2f position) const noexcept{
-
-
-}
-
-void item::push_button(game_info *info, client *client,
-	sf::Vector2f but_position, sf::Vector2f click_position) const noexcept{
-
-}*/
 
 namespace{
 
@@ -183,67 +172,14 @@ sf::Sprite create_sprite_f(sf::Texture *texture,
 
 }
 
-/*std::shared_ptr<unit> unit::create_caravan(unit::weight_level_type weight,
-	uint32_t cell_index_){
-
-	std::string path("./../data/");
-	std::string filename("caravan_60x60x8.png");
-	unit::textures[filename].loadFromFile(path + filename);
-
-	unit result{};
-	result.vision_range = 3;
-	result.cell_index = cell_index_;
-	result.sprites.emplace_back(
-		create_sprite_f(&unit::textures[filename],
-		60, 60, 0, 0));
-
-
-
-	switch(weight){
-		case unit::weight_level_type::LIGHT :
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[filename],
-				60, 60, 2, 0));
-			result.speed_mod = (float)2 / 10000;
-		break;
-		case unit::weight_level_type::LOADED :
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[filename],
-				60, 60, 1, 0));
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[filename],
-				60, 60, 0, 1));
-			result.speed_mod = (float)1 / 10000;
-		break;
-		case unit::weight_level_type::OVERLOADED :
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[filename],
-				60, 60, 1, 0));
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[filename],
-				60, 60, 0, 1));
-			result.sprites.emplace_back(
-				create_sprite_f(&unit::textures[filename],
-				60, 60, 1, 1));
-			result.speed_mod = (float)0.5 / 10000;
-		break;
-	}
-
-	result.speed[(int)terrain_en::RIVER] = 0;
-	result.speed[(int)terrain_en::MOUNTAIN] = 0.5;
-	result.speed[(int)terrain_en::PLAIN] = 2;
-	result.speed[(int)terrain_en::PALM] = 2;
-
-	return std::make_shared<unit>(result);
-}*/
-
 unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 	: cell_index(cell_index_), vision_range(vision_range_){
 }
 
 mech::mech(uint32_t cell_index_)
-	: unit(cell_index_, 4), weapon("Rocket", 15000),
-	energy_text("energy_value", get_font(), 22){
+	: unit(cell_index_, 4)/*, weapon("Rocket", 15000)*/,
+	energy_text("energy_value", get_font(), 22),
+	heat_text("heat_value", get_font(), 22){
 
 	std::string path("./../data/");
 	std::string filename("mech_60x60x6.png");
@@ -257,6 +193,8 @@ mech::mech(uint32_t cell_index_)
 	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
 	this->speed[(int)terrain_en::PLAIN] = 2;
 	this->speed[(int)terrain_en::PALM] = 2;
+
+	torso.emplace_back(std::make_shared<item>("Rocket", 15000));
 }
 
 item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) const{
@@ -311,14 +249,33 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 	};
 
 	add_bar(sf::Vector2f(20, 20), this->energy_capacity, this->current_energy,
-		 &this->energy_text, sf::Color(46, 108, 43));
+		 &this->energy_text, sf::Color(111, 189, 80));
+
+	add_bar(sf::Vector2f(90, 20), this->heat_capacity, this->current_heat,
+ 		 &this->heat_text, sf::Color(136, 52, 14));
 
 	return shape;
 }
 
+item_shape mech::prepare_shape(client *client) const{
+	item_shape item_shape{};
+	auto get_zone_shape = [this, client, &item_shape](auto &zone, sf::Vector2f pos){
+		sf::Vector2f offset(0, 40);
+		uint32_t counter = 0;
+		for(auto &item : zone){
+			item_shape += item->get_draw_shape(this, client,
+				pos + offset * (float)counter++);
+		}
+	};
+	get_zone_shape(this->torso, sf::Vector2f{-100, -200});
+	get_zone_shape(this->left_arm, sf::Vector2f{-200, -200});
+	get_zone_shape(this->right_arm, sf::Vector2f{0, -200});
+
+	return item_shape;
+}
+
 void mech::draw_gui(game_info *info, client *client){
-//	float scale = client->get_view_scale();
-	auto item_shape = weapon.get_draw_shape(client, sf::Vector2f{-100, -200});
+	item_shape item_shape = prepare_shape(client);
 	auto status_shape = this->get_status_shape(client, sf::Vector2f{0, 0});
 	client->draw_item_shape(item_shape);
 	client->draw_item_shape(status_shape);
@@ -327,7 +284,7 @@ void mech::draw_gui(game_info *info, client *client){
 bool mech::interact_gui(game_info *info, client *client){
 	float scale = client->get_view_scale();
 	sf::Vector2f pos = client->mouse_on_map();
-	auto shape = this->weapon.get_draw_shape(client, sf::Vector2f{-100, -200});
+	item_shape shape = prepare_shape(client);
 	for(auto &sprite : shape.elements){
 		if(is_inside_sprite(sprite, pos)){
 			std::cerr << "click" << std::endl;
@@ -391,5 +348,12 @@ void unit::update(game_info *info, uint32_t player_index, float time){
 }
 
 void mech::update_v(game_info *info, uint32_t player_index, float time){
-	weapon.update(time);
+	auto item_update = [this, &time](auto &zone){
+		for(auto &item : zone){
+			item->update(this, time);
+		}
+	};
+	item_update(this->torso);
+	item_update(this->left_arm);
+	item_update(this->right_arm);
 }
