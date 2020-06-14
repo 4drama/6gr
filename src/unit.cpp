@@ -29,12 +29,12 @@ void item::load_sprites(){
 	sprites["inactive_button"].setPosition(34, 0);
 
 	sprites["power_off"] = sf::Sprite(item::texture,
-		sf::IntRect(197, 23, 15, 35));
-	sprites["power_off"].setPosition(0, 0);
+		sf::IntRect(197, 23, 28, 35));
+	sprites["power_off"].setPosition(-13, 0);
 
 	sprites["power_on"] = sf::Sprite(item::texture,
-		sf::IntRect(212, 23, 15, 35));
-	sprites["power_on"].setPosition(0, 0);
+		sf::IntRect(225, 23, 28, 35));
+	sprites["power_on"].setPosition(-13, 0);
 
 	sprites["active_hotkey_screen"] = sf::Sprite(item::texture,
 		sf::IntRect(180, 0, 15, 23));
@@ -153,6 +153,15 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
+legs::legs(std::string name)
+	: item(name, 1), modes{{0.3f, 2}, {1.0f, 10}, {3.0f, 70}}{
+
+	this->speed[(int)terrain_en::RIVER] = 0;
+	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
+	this->speed[(int)terrain_en::PLAIN] = 2;
+	this->speed[(int)terrain_en::PALM] = 2;
+}
+
 namespace{
 
 sf::Sprite create_sprite_f(sf::Texture *texture,
@@ -177,7 +186,7 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 }
 
 mech::mech(uint32_t cell_index_)
-	: unit(cell_index_, 4)/*, weapon("Rocket", 15000)*/,
+	: unit(cell_index_, 4),
 	energy_text("energy_value", get_font(), 22),
 	heat_text("heat_value", get_font(), 22){
 
@@ -189,12 +198,27 @@ mech::mech(uint32_t cell_index_)
 		create_sprite_f(&unit::textures[filename],
 		60, 60, 0, 0));
 
-	this->speed[(int)terrain_en::RIVER] = 0;
-	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
-	this->speed[(int)terrain_en::PLAIN] = 2;
-	this->speed[(int)terrain_en::PALM] = 2;
+	this->left_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
+	this->right_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
+	this->torso.emplace_back(std::make_shared<legs>("Legs"));
+	this->refresh();
+}
 
-	torso.emplace_back(std::make_shared<item>("Rocket", 15000));
+void mech::refresh(){
+	this->legs_ptr = nullptr;
+	for(auto& item : this->left_arm){
+
+	}
+
+	for(auto& item : this->right_arm){
+
+	}
+
+	for(auto& item : this->torso){
+		if(item->is_legs()){
+			this->legs_ptr = item->is_legs();
+		}
+	}
 }
 
 item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) const{
@@ -268,8 +292,8 @@ item_shape mech::prepare_shape(client *client) const{
 		}
 	};
 	get_zone_shape(this->torso, sf::Vector2f{-100, -200});
-	get_zone_shape(this->left_arm, sf::Vector2f{-200, -200});
-	get_zone_shape(this->right_arm, sf::Vector2f{0, -200});
+	get_zone_shape(this->left_arm, sf::Vector2f{-400, -200});
+	get_zone_shape(this->right_arm, sf::Vector2f{200, -200});
 
 	return item_shape;
 }
@@ -294,6 +318,17 @@ bool mech::interact_gui(game_info *info, client *client){
 	return false;
 }
 
+float mech::move_calculate(float time, terrain_en ter_type) noexcept{
+	float &energy_available = this->current_energy;
+	float energy_necessary = this->legs_ptr->energy_necessary(time / 10000);
+	float rate = 1;
+	if(energy_available < energy_necessary){
+		rate = energy_available / energy_necessary;
+	}
+	energy_available -= energy_necessary * rate;
+	return this->get_speed(ter_type) * time * rate;
+}
+
 void unit::open_vision(game_info *info, uint32_t player_index){
 	this->vision_indeces = open_adjacent(info, player_index,
 		this->cell_index, this->vision_range);
@@ -304,7 +339,7 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 		return;
 
 	terrain_en terr_type = info->get_cell(this->path.front()).ter.type;
-	this->path_progress += time * this->get_speed(terr_type);
+	this->path_progress += move_calculate(time, terr_type);
 
 	if((this->cell_index == this->path.back())
 		|| (info->get_cell(this->path.front()).unit != nullptr) ){

@@ -55,7 +55,9 @@ inline item_shape& operator+=(item_shape& left, const item_shape& right){
     return left;
 }
 
-class item{
+class legs;
+
+class item : std::enable_shared_from_this<item>{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
@@ -63,6 +65,8 @@ class item{
 /*	static inline const sf::Sprite& get_sprite(std::string name) const noexcept{
 		return sprites[name]};*/
 public:
+	inline virtual legs* is_legs() noexcept {return nullptr;};
+
 	item(std::string name, float delay);
 
 	inline const bool& get_power_status() const noexcept{ return power_status;};
@@ -99,8 +103,31 @@ private:
 
 class legs : public item{
 public:
+	legs(std::string name);
+	legs* is_legs() noexcept override {	return this;};
+//	void update(mech* owner, float time);
 
+	inline float get_speed(terrain_en ter_type) const noexcept{
+		return this->speed[(int)ter_type] * ((float)2 / 10000)
+			* modes[(int)current_mode].rate;};
+
+	inline float energy_necessary(float time) const noexcept{
+		return time * modes[(int)current_mode].energy;};
 private:
+	float speed[(int)terrain_en::END];
+
+	enum class mode_name{
+		fast = 0,
+		medium = 1,
+		slow = 2,
+		size = 3
+	};
+	mode_name current_mode = mode_name::medium;
+	struct mode{
+		float rate;
+		float energy;
+	};
+	mode modes[(int)mode_name::size];
 };
 
 struct unit : std::enable_shared_from_this<unit>{
@@ -127,6 +154,8 @@ struct unit : std::enable_shared_from_this<unit>{
 private:
 	void unit_update_move(game_info *info, uint32_t player_index, float time);
 	inline virtual void update_v(game_info *info, uint32_t player_index, float time){return ;};
+	virtual float move_calculate(float time, terrain_en ter_type) noexcept{
+		return this->get_speed(ter_type) * time;};
 };
 
 class mech : public unit{
@@ -137,7 +166,7 @@ public:
 	mech(uint32_t cell_index);
 
 	inline float get_speed(terrain_en ter_type) const noexcept override
-		{return this->speed[(int)ter_type] * ((float)2 / 10000);};
+		{return legs_ptr ? legs_ptr->get_speed(ter_type) : 0;};
 
 	void draw_gui(game_info *info, client *client);
 	bool interact_gui(game_info *info, client *client);
@@ -152,16 +181,20 @@ private:
 	float heat_capacity = 300;
 	mutable sf::Text heat_text;
 
+	legs *legs_ptr = nullptr;
 	std::list<std::shared_ptr<item>> left_arm;
 	std::list<std::shared_ptr<item>> torso;
 	std::list<std::shared_ptr<item>> right_arm;
 
-	float speed[(int)terrain_en::END];
+//	float speed[(int)terrain_en::END];
 
 	item_shape get_status_shape(client *client, const sf::Vector2f& position) const;
 	void update_v(game_info *info, uint32_t player_index, float time);
 
 	item_shape prepare_shape(client *client) const;
+	void refresh();
+
+	float move_calculate(float time, terrain_en ter_type) noexcept override;
 };
 
 #endif
