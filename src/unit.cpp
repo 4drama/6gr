@@ -3,9 +3,13 @@
 #include <iostream>
 
 sf::Texture item::texture{};
-std::map<std::string, sf::Sprite> item::sprites;
+std::map<std::string, sf::Sprite> item::sprites{};
 
 std::map<std::string, sf::Texture> unit::textures{};
+
+item_button::item_button(sf::Sprite sprite_, std::function<void()> func_)
+	: sprite(sprite_), func(func_) {
+};
 
 bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos){
 	sf::FloatRect rect = sprite.getGlobalBounds();
@@ -87,11 +91,11 @@ void item::update(mech* owner, float time){
 }
 
 item_shape item::get_draw_shape(const mech* owner, client *client,
-	const sf::Vector2f& position) const{
+	const sf::Vector2f& position){
 	float scale = client->get_view_scale();
 
 	for(auto &sprite : item::sprites){
-		sprite.second.setScale (scale, -scale);
+		sprite.second.setScale(scale, -scale);
 	}
 
 	item_shape shape{};
@@ -105,47 +109,47 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 	};
 
 	if(this->get_power_status()){
-		shape.elements.push_back(item::sprites["power_on"]);
-		shape.elements.push_back(item::sprites["active_hotkey_screen"]);
-		shape.elements.push_back(item::sprites["active_delay_screen"]);
-		shape.elements.push_back(item::sprites["active_button"]);
+		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
+		shape.elements.emplace_back(item::sprites["active_hotkey_screen"], std::function<void()>());
+		shape.elements.emplace_back(item::sprites["active_delay_screen"], std::function<void()>());
+		shape.elements.emplace_back(item::sprites["active_button"], std::function<void()>());
 
 		if(this->get_ready(owner)){
 			for(uint32_t x = 0; x < 190; x += 38){
-				sf::Sprite sprite(item::sprites["progress_bar_ready"]);
-				sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
-				shape.elements.push_back(sprite);
+				item_button button(item::sprites["progress_bar_ready"], std::function<void()>());
+				button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
+				shape.elements.emplace_back(button);
 			}
 			add_text(sf::Vector2f(39, 5), &this->name_text);
 		} else {
-			shape.elements.push_back(item::sprites["inactive_button"]);
+			shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
 			float delay_rate = this->get_delay();
 			float progress = 0;
 			for(uint32_t x = 0; x < 190; x += 38){
 				progress += 0.2;
 				if(progress < delay_rate){
-					sf::Sprite sprite(item::sprites["progress_bar_reload_ready"]);
-					sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
-					shape.elements.push_back(sprite);
+					item_button button(item::sprites["progress_bar_reload_ready"], std::function<void()>());
+					button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
+					shape.elements.emplace_back(button);
 				} else {
-					sf::Sprite sprite(item::sprites["progress_bar_not_ready"]);
-					sprite.setPosition(sprite.getPosition() + sf::Vector2f(x, 0));
-					shape.elements.push_back(sprite);
+					item_button button(item::sprites["progress_bar_not_ready"], std::function<void()>());
+					button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
+					shape.elements.emplace_back(button);
 				}
 			}
 			add_text(sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136));
 		}
 	} else {
-		shape.elements.push_back(item::sprites["power_off"]);
-		shape.elements.push_back(item::sprites["inactive_hotkey_screen"]);
-		shape.elements.push_back(item::sprites["inactive_button"]);
-		shape.elements.push_back(item::sprites["inactive_delay_screen"]);
+		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
+		shape.elements.emplace_back(item::sprites["inactive_hotkey_screen"], std::function<void()>());
+		shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
+		shape.elements.emplace_back(item::sprites["inactive_delay_screen"], std::function<void()>());
 
 		add_text(sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136));
 	}
 
-	for(auto& sprite : shape.elements){
-		sprite.setPosition(sprite.getPosition() * scale + position * scale);
+	for(auto& button : shape.elements){
+		button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
 	}
 	for(auto& text : shape.text_elements){
 		text->setPosition(text->getPosition() * scale + position * scale);
@@ -154,7 +158,7 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 }
 
 legs::legs(std::string name)
-	: item(name, 1), modes{{0.3f, 2}, {1.0f, 10}, {3.0f, 70}}{
+	: item(name, 1), modes{{0.3f, 2, 1}, {1.0f, 10, 5}, {3.0f, 70, 10}}{
 
 	this->speed[(int)terrain_en::RIVER] = 0;
 	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
@@ -309,9 +313,11 @@ bool mech::interact_gui(game_info *info, client *client){
 	float scale = client->get_view_scale();
 	sf::Vector2f pos = client->mouse_on_map();
 	item_shape shape = prepare_shape(client);
-	for(auto &sprite : shape.elements){
-		if(is_inside_sprite(sprite, pos)){
-			std::cerr << "click" << std::endl;
+	for(auto &but : shape.elements){
+		if(is_inside_sprite(but.sprite, pos)){
+			if(but.func){
+				but.func();
+			}
 			return true;
 		}
 	}
@@ -319,13 +325,25 @@ bool mech::interact_gui(game_info *info, client *client){
 }
 
 float mech::move_calculate(float time, terrain_en ter_type) noexcept{
+	if(!this->legs_ptr->get_power_status())
+		return 0;
+
 	float &energy_available = this->current_energy;
+	float heat_available = heat_capacity - this->current_heat;
+
 	float energy_necessary = this->legs_ptr->energy_necessary(time / 10000);
+	float heat_necessary = this->legs_ptr->heat_necessary(time / 10000);
+
 	float rate = 1;
-	if(energy_available < energy_necessary){
-		rate = energy_available / energy_necessary;
+	if((energy_available < energy_necessary) || (heat_available < heat_necessary)){
+		float energy_rate = energy_available / energy_necessary;
+		float heat_rate = heat_available / heat_necessary;
+		rate = energy_rate < heat_rate ? energy_rate : heat_rate;
 	}
-	energy_available -= energy_necessary * rate;
+
+	this->current_energy -= energy_necessary * rate;
+	this->current_heat += heat_necessary * rate;
+
 	return this->get_speed(ter_type) * time * rate;
 }
 

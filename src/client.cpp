@@ -344,8 +344,8 @@ void client::draw_item_shape(const item_shape &shape) const{
 	for(auto &bar : shape.bar_elements){
 		this->window.draw(bar);
 	}
-	for(auto &sprite : shape.elements){
-		this->window.draw(sprite);
+	for(auto &button : shape.elements){
+		this->window.draw(button.sprite);
 	}
 	for(auto &text : shape.text_elements){
 		this->window.draw(*text);

@@ -10,15 +10,22 @@
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <iostream>
+#include <functional>
 
 bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos);
 
 class mech;
 
+struct item_button{
+	sf::Sprite sprite;
+	std::function<void()> func;
+
+	item_button() = default;
+	item_button(sf::Sprite sprite_, std::function<void()> func_);
+};
+
 struct item_shape{
-	std::list<sf::Sprite> elements;
+	std::list<item_button> elements;
 	std::list<sf::Text*> text_elements;
 
 	std::list<sf::RectangleShape> bar_elements;
@@ -86,7 +93,7 @@ public:
 	virtual void update(mech* owner, float time);
 
 	virtual item_shape get_draw_shape(const mech* owner, client *client,
-		const sf::Vector2f& position) const;
+		const sf::Vector2f& position);
 /*	void draw_button(game_info *info, client *client, sf::Vector2f position) const noexcept;
 	void push_button(game_info *info, client *client,
 		sf::Vector2f but_position, sf::Vector2f click_position) const noexcept;*/
@@ -113,6 +120,9 @@ public:
 
 	inline float energy_necessary(float time) const noexcept{
 		return time * modes[(int)current_mode].energy;};
+
+	inline float heat_necessary(float time) const noexcept{
+		return time * modes[(int)current_mode].heat;};
 private:
 	float speed[(int)terrain_en::END];
 
@@ -126,6 +136,7 @@ private:
 	struct mode{
 		float rate;
 		float energy;
+		float heat;
 	};
 	mode modes[(int)mode_name::size];
 };
