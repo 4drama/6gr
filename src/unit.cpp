@@ -5,6 +5,9 @@
 sf::Texture item::texture{};
 std::map<std::string, sf::Sprite> item::sprites{};
 
+sf::Texture legs::texture{};
+std::map<std::string, sf::Sprite> legs::sprites{};
+
 std::map<std::string, sf::Texture> unit::textures{};
 
 item_button::item_button(sf::Sprite sprite_, std::function<void()> func_)
@@ -157,13 +160,100 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
+void legs::load_sprites(){
+	legs::texture.loadFromFile("./../data/legs_button.png");
+
+	legs::sprites["display_off"] = sf::Sprite(legs::texture,
+		sf::IntRect(0, 0, 86, 35));
+	legs::sprites["display_off"].setPosition(17, 0);
+
+	legs::sprites["display_on"] = sf::Sprite(legs::texture,
+		sf::IntRect(0, 35, 86, 35));
+	legs::sprites["display_on"].setPosition(17, 0);
+
+	legs::sprites["slow_on"] = sf::Sprite(legs::texture,
+		sf::IntRect(86, 0, 35, 35));
+	legs::sprites["slow_on"].setPosition(105, 0);
+
+	legs::sprites["slow_off"] = sf::Sprite(legs::texture,
+		sf::IntRect(86, 35, 35, 35));
+	legs::sprites["slow_off"].setPosition(105, 0);
+
+	legs::sprites["medium_on"] = sf::Sprite(legs::texture,
+		sf::IntRect(121, 0, 35, 35));
+	legs::sprites["medium_on"].setPosition(142, 0);
+
+	legs::sprites["medium_off"] = sf::Sprite(legs::texture,
+		sf::IntRect(121, 35, 35, 35));
+	legs::sprites["medium_off"].setPosition(142, 0);
+
+	legs::sprites["fast_on"] = sf::Sprite(legs::texture,
+		sf::IntRect(156, 0, 35, 35));
+	legs::sprites["fast_on"].setPosition(179, 0);
+
+	legs::sprites["fast_off"] = sf::Sprite(legs::texture,
+		sf::IntRect(156, 35, 35, 35));
+	legs::sprites["fast_off"].setPosition(179, 0);
+};
+
 legs::legs(std::string name)
 	: item(name, 1), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
+
+	if(legs::sprites.empty())
+		legs::load_sprites();
 
 	this->speed[(int)terrain_en::RIVER] = 0;
 	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
 	this->speed[(int)terrain_en::PLAIN] = 2;
 	this->speed[(int)terrain_en::PALM] = 2;
+}
+
+item_shape legs::get_draw_shape(const mech* owner, client *client,
+	const sf::Vector2f& position){
+		float scale = client->get_view_scale();
+
+		for(auto &sprite : item::sprites){
+			sprite.second.setScale(scale, -scale);
+		}
+
+		for(auto &sprite : legs::sprites){
+			sprite.second.setScale(scale, -scale);
+		}
+
+		item_shape shape{};
+		if(this->get_power_status()){
+			shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
+			shape.elements.emplace_back(legs::sprites["display_on"], std::function<void()>());
+		} else {
+			shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
+			shape.elements.emplace_back(legs::sprites["display_off"], std::function<void()>());
+		}
+
+		if(this->current_mode == legs::mode_name::slow){
+			shape.elements.emplace_back(legs::sprites["slow_on"], std::function<void()>());
+		} else {
+			shape.elements.emplace_back(legs::sprites["slow_off"],
+				[this](){this->set_mode(legs::mode_name::slow);});
+		}
+
+		if(this->current_mode == legs::mode_name::medium){
+			shape.elements.emplace_back(legs::sprites["medium_on"], std::function<void()>());
+		} else {
+			shape.elements.emplace_back(legs::sprites["medium_off"],
+				[this](){this->set_mode(legs::mode_name::medium);});
+		}
+
+		if(this->current_mode == legs::mode_name::fast){
+			shape.elements.emplace_back(legs::sprites["fast_on"], std::function<void()>());
+		} else {
+			shape.elements.emplace_back(legs::sprites["fast_off"],
+				[this](){this->set_mode(legs::mode_name::fast);});
+		}
+
+		for(auto& button : shape.elements){
+			button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
+		}
+		return shape;
 }
 
 namespace{
@@ -342,7 +432,7 @@ float mech::move_calculate(float time, terrain_en ter_type) noexcept{
 		rate = energy_rate < heat_rate ? energy_rate : heat_rate;
 	}
 
-	this->status.add_current(diff);
+	this->status.add_current(diff * rate);
 	return this->get_speed(ter_type) * time * rate;
 }
 

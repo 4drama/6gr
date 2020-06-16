@@ -66,6 +66,7 @@ inline item_shape& operator+=(item_shape& left, const item_shape& right){
 class legs;
 
 class item : std::enable_shared_from_this<item>{
+protected:
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
@@ -105,6 +106,10 @@ private:
 };
 
 class legs : public item{
+	static sf::Texture texture;
+	static std::map<std::string, sf::Sprite> sprites;
+
+	static void load_sprites();
 public:
 	legs(std::string name);
 	legs* is_legs() noexcept override {	return this;};
@@ -115,13 +120,16 @@ public:
 			* modes[(int)current_mode].rate;};
 
 	inline mech_status necessary(float time) const noexcept;
+
+	item_shape get_draw_shape(const mech* owner, client *client,
+		const sf::Vector2f& position) override;
 private:
 	float speed[(int)terrain_en::END];
 
 	enum class mode_name{
-		fast = 0,
+		slow = 0,
 		medium = 1,
-		slow = 2,
+		fast = 2,
 		size = 3
 	};
 	mode_name current_mode = mode_name::medium;
@@ -131,6 +139,8 @@ private:
 		float heat;
 	};
 	mode modes[(int)mode_name::size];
+
+	inline void set_mode(mode_name mode) noexcept {this->current_mode = mode;};
 };
 
 struct unit : std::enable_shared_from_this<unit>{
