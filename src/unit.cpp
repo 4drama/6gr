@@ -158,7 +158,7 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 }
 
 legs::legs(std::string name)
-	: item(name, 1), modes{{0.3f, 2, 1}, {1.0f, 10, 5}, {3.0f, 70, 10}}{
+	: item(name, 1), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
 
 	this->speed[(int)terrain_en::RIVER] = 0;
 	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
@@ -276,10 +276,10 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 			std::to_string((int)curr_value));
 	};
 
-	add_bar(sf::Vector2f(20, 20), this->energy_capacity, this->current_energy,
+	add_bar(sf::Vector2f(20, 20), this->status.energy_capacity, this->status.current_energy,
 		 &this->energy_text, sf::Color(111, 189, 80));
 
-	add_bar(sf::Vector2f(90, 20), this->heat_capacity, this->current_heat,
+	add_bar(sf::Vector2f(90, 20), this->status.heat_capacity, this->status.current_heat,
  		 &this->heat_text, sf::Color(136, 52, 14));
 
 	return shape;
@@ -328,11 +328,12 @@ float mech::move_calculate(float time, terrain_en ter_type) noexcept{
 	if(!this->legs_ptr->get_power_status())
 		return 0;
 
-	float &energy_available = this->current_energy;
-	float heat_available = heat_capacity - this->current_heat;
+	float &energy_available = this->status.current_energy;
+	float heat_available = this->status.heat_capacity - this->status.current_heat;
 
-	float energy_necessary = this->legs_ptr->energy_necessary(time / 10000);
-	float heat_necessary = this->legs_ptr->heat_necessary(time / 10000);
+	mech_status diff = this->legs_ptr->necessary(time / 10000);
+	float energy_necessary = -diff.current_energy;
+	const float& heat_necessary = diff.current_heat;
 
 	float rate = 1;
 	if((energy_available < energy_necessary) || (heat_available < heat_necessary)){
@@ -341,9 +342,7 @@ float mech::move_calculate(float time, terrain_en ter_type) noexcept{
 		rate = energy_rate < heat_rate ? energy_rate : heat_rate;
 	}
 
-	this->current_energy -= energy_necessary * rate;
-	this->current_heat += heat_necessary * rate;
-
+	this->status.add_current(diff);
 	return this->get_speed(ter_type) * time * rate;
 }
 

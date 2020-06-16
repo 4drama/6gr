@@ -14,6 +14,7 @@
 
 bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos);
 
+struct mech_status;
 class mech;
 
 struct item_button{
@@ -69,8 +70,6 @@ class item : std::enable_shared_from_this<item>{
 	static std::map<std::string, sf::Sprite> sprites;
 
 	static void load_sprites();
-/*	static inline const sf::Sprite& get_sprite(std::string name) const noexcept{
-		return sprites[name]};*/
 public:
 	inline virtual legs* is_legs() noexcept {return nullptr;};
 
@@ -94,9 +93,6 @@ public:
 
 	virtual item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position);
-/*	void draw_button(game_info *info, client *client, sf::Vector2f position) const noexcept;
-	void push_button(game_info *info, client *client,
-		sf::Vector2f but_position, sf::Vector2f click_position) const noexcept;*/
 private:
 	std::string name;
 	sf::Keyboard::Key key = sf::Keyboard::Unknown;
@@ -118,11 +114,7 @@ public:
 		return this->speed[(int)ter_type] * ((float)2 / 10000)
 			* modes[(int)current_mode].rate;};
 
-	inline float energy_necessary(float time) const noexcept{
-		return time * modes[(int)current_mode].energy;};
-
-	inline float heat_necessary(float time) const noexcept{
-		return time * modes[(int)current_mode].heat;};
+	inline mech_status necessary(float time) const noexcept;
 private:
 	float speed[(int)terrain_en::END];
 
@@ -169,6 +161,24 @@ private:
 		return this->get_speed(ter_type) * time;};
 };
 
+struct mech_status {
+	float current_energy = 75;
+	float energy_capacity = 100;
+
+	float current_heat = 50;
+	float heat_capacity = 300;
+
+	inline static mech_status capacity(float energy, float heat){
+		return mech_status{0, energy, 0, heat};};
+
+	inline static mech_status current(float energy, float heat){
+		return mech_status{energy, 0, heat, 0};};
+
+	inline mech_status& operator*(float right);
+	inline mech_status& add_capacity(const mech_status& right);
+	inline mech_status& add_current(const mech_status& right);
+};
+
 class mech : public unit{
 public:
 	static inline std::shared_ptr<mech> create(uint32_t cell_index){
@@ -183,21 +193,15 @@ public:
 	bool interact_gui(game_info *info, client *client);
 private:
 	item *waiting_confirm = nullptr;
+	mech_status status;
 
-	float current_energy = 75;
-	float energy_capacity = 100;
 	mutable sf::Text energy_text;
-
-	float current_heat = 50;
-	float heat_capacity = 300;
 	mutable sf::Text heat_text;
 
 	legs *legs_ptr = nullptr;
 	std::list<std::shared_ptr<item>> left_arm;
 	std::list<std::shared_ptr<item>> torso;
 	std::list<std::shared_ptr<item>> right_arm;
-
-//	float speed[(int)terrain_en::END];
 
 	item_shape get_status_shape(client *client, const sf::Vector2f& position) const;
 	void update_v(game_info *info, uint32_t player_index, float time);
@@ -206,6 +210,30 @@ private:
 	void refresh();
 
 	float move_calculate(float time, terrain_en ter_type) noexcept override;
+};
+
+inline mech_status& mech_status::operator*(float right){
+	this->current_energy *= right;
+	this->current_heat *= right;
+	return *this;
+}
+
+inline mech_status& mech_status::add_capacity(const mech_status& right){
+	this->energy_capacity += right.energy_capacity;
+	this->heat_capacity += right.heat_capacity;
+	return *this;
+};
+
+inline mech_status& mech_status::add_current(const mech_status& right){
+	this->current_energy += right.current_energy;
+	this->current_heat += right.current_heat;
+	return *this;
+};
+
+inline mech_status legs::necessary(float time) const noexcept{
+	const float& energy = this->modes[(int)current_mode].energy;
+	const float& heat = this->modes[(int)current_mode].heat;
+	return mech_status::current(energy, heat) * time;
 };
 
 #endif
