@@ -182,19 +182,22 @@ void client::control_update(game_info *info, float time){
 
 			if(info->players[this->player->get_index()].selected_units.size() != 0){
 				auto *selected_units = &info->players[this->player->get_index()].selected_units;
-				auto finish_cell = get_cell_index_under_mouse(info, this);
+				uint32_t finish_cell = get_cell_index_under_mouse(info, this);
+				if(finish_cell != UINT32_MAX){
+					for(auto &curr_unit : *selected_units){
+						if((curr_unit.first == this->player->get_index())
+							&& (curr_unit.second.use_count() != 0)){
 
-				for(auto &curr_unit : *selected_units){
-					if((curr_unit.first == this->player->get_index()) && (curr_unit.second.use_count() != 0)){
-						std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
+							std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
 
-						auto old_front_cell = unit_ptr->path.front();
+							auto old_front_cell = unit_ptr->path.front();
 
-						unit_ptr->path = path_find(info, unit_ptr->cell_index,
-							finish_cell, unit_ptr, this->player->get_index(), true);
+							unit_ptr->path = path_find(info, unit_ptr->cell_index,
+								finish_cell, unit_ptr, this->player->get_index(), true);
 
-						if(old_front_cell != unit_ptr->path.front())
-							unit_ptr->path_progress = 0;
+							if(old_front_cell != unit_ptr->path.front())
+								unit_ptr->path_progress = 0;
+						}
 					}
 				}
 			}

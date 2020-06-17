@@ -165,6 +165,8 @@ void gui::update(game_info *info, client *client){
 			place_button(client, &but,
 				place_position::UP_RIGHT, to_position::LEFT, i++, 100);
 		});
+
+	client->set_buttons_gui(this->buttons);
 }
 
 namespace{
@@ -260,7 +262,8 @@ namespace{
 bool gui::gui_interact(game_info *info, client *client){
 	sf::Vector2f pos = client->mouse_on_map();
 
-	for(auto &but : buttons){
+	auto buttons_gui = client->get_buttons_gui();
+	for(auto &but : buttons_gui){
 		if(is_inside_f(but, pos)){
 			but.inter(*info, *client, &but);
 			return true;

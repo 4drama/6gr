@@ -56,6 +56,8 @@ public:
 	std::vector<uint32_t> get_vision_indeces(game_info *info) const;
 	sf::Vector2f mouse_on_map() const;
 
+	inline void set_buttons_gui(std::vector<button> buttons){this->buttons_gui = buttons;};
+	inline const std::vector<button>& get_buttons_gui() const noexcept {return this->buttons_gui;};
 private:
 	int Width, Height;
 
@@ -70,6 +72,8 @@ private:
 	int zoom_manager;
 
 	std::shared_ptr<player_info> player;
+
+	std::vector<button> buttons_gui;
 };
 
 sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept;
