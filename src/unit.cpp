@@ -96,24 +96,42 @@ void item::update(mech* owner, float time){
 	}
 }
 
-item_shape item::get_draw_shape(const mech* owner, client *client,
-	const sf::Vector2f& position){
-	float scale = client->get_view_scale();
+namespace{
 
-	for(auto &sprite : item::sprites){
+void set_scale_f(float scale, std::map<std::string, sf::Sprite> &sprites){
+	for(auto &sprite : sprites){
 		sprite.second.setScale(scale, -scale);
 	}
+};
+
+sf::Text *update_text_f(float scale, sf::Vector2f pos, sf::Text *text,
+	const sf::Color &color = sf::Color::White){
+
+	text->setScale(scale, -scale);
+	text->setPosition(pos);
+	text->setColor(color);
+
+	return text;
+};
+
+void place_shape(item_shape &shape, float scale, const sf::Vector2f& position){
+	for(auto& button : shape.elements){
+		button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
+	}
+	for(auto& text : shape.text_elements){
+		text->setPosition(text->getPosition() * scale + position * scale);
+	}
+};
+
+}
+
+item_shape item::get_draw_shape(const mech* owner, client *client,
+	const sf::Vector2f& position){
+
+	float scale = client->get_view_scale();
+	set_scale_f(scale, item::sprites);
 
 	item_shape shape{};
-	auto add_text = [scale, &shape](sf::Vector2f pos, sf::Text *text,
-		const sf::Color &color = sf::Color::White) {
-
-		text->setScale(scale, -scale);
-		text->setPosition(pos);
-		text->setColor(color);
-		shape.text_elements.push_back(text);
-	};
-
 	if(this->get_power_status()){
 		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
 		shape.elements.emplace_back(item::sprites["active_hotkey_screen"], std::function<void()>());
@@ -126,7 +144,8 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 				button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
 				shape.elements.emplace_back(button);
 			}
-			add_text(sf::Vector2f(39, 5), &this->name_text);
+			shape.text_elements.emplace_back(
+				update_text_f(scale, sf::Vector2f(39, 5), &this->name_text));
 		} else {
 			shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
 			float delay_rate = this->get_delay();
@@ -143,23 +162,19 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 					shape.elements.emplace_back(button);
 				}
 			}
-			add_text(sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136));
+			shape.text_elements.emplace_back(update_text_f(
+				scale, sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136)));
 		}
 	} else {
 		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
 		shape.elements.emplace_back(item::sprites["inactive_hotkey_screen"], std::function<void()>());
 		shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
 		shape.elements.emplace_back(item::sprites["inactive_delay_screen"], std::function<void()>());
-
-		add_text(sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136));
+		shape.text_elements.emplace_back(update_text_f(
+			scale,sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136)));
 	}
 
-	for(auto& button : shape.elements){
-		button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
-	}
-	for(auto& text : shape.text_elements){
-		text->setPosition(text->getPosition() * scale + position * scale);
-	}
+	place_shape(shape, scale, position);
 	return shape;
 }
 
@@ -244,33 +259,21 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 	const sf::Vector2f& position){
 
 	float scale = client->get_view_scale();
-
-	for(auto &sprite : item::sprites){
-		sprite.second.setScale(scale, -scale);
-	}
-
-	for(auto &sprite : engine::sprites){
-		sprite.second.setScale(scale, -scale);
-	}
+	set_scale_f(scale, item::sprites);
+	set_scale_f(scale, engine::sprites);
 
 	item_shape shape{};
-	auto add_text = [scale, &shape](sf::Vector2f pos, sf::Text *text,
-		const sf::Color &color = sf::Color::White) {
-
-		text->setScale(scale, -scale);
-		text->setPosition(pos);
-		text->setColor(color);
-		shape.text_elements.push_back(text);
-	};
-
 	shape.elements.emplace_back(engine::sprites["picture"], std::function<void()>());
 	if(this->get_power_status()){
 		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
 		shape.elements.emplace_back(engine::sprites["display_on"], std::function<void()>());
 
-		add_text(sf::Vector2f(95, 3), &this->threshold_text, sf::Color(112, 166, 65));
+		shape.text_elements.emplace_back(update_text_f(
+			scale, sf::Vector2f(95, 3), &this->threshold_text, sf::Color(112, 166, 65)));
+
 		this->threshold_value_text.setString(std::to_string(this->threshold) + std::string("%"));
-		add_text(sf::Vector2f(115, -11), &this->threshold_value_text, sf::Color(112, 166, 65));
+		shape.text_elements.emplace_back(update_text_f(
+			scale, sf::Vector2f(115, -11), &this->threshold_value_text, sf::Color(112, 166, 65)));
 	} else {
 		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
 		shape.elements.emplace_back(engine::sprites["display_off"], std::function<void()>());
@@ -290,12 +293,7 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 			this->get_power_status() ? [this](){this->add_threshold(10);} : std::function<void()>());
 	}
 
-	for(auto& button : shape.elements){
-		button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
-	}
-	for(auto& text : shape.text_elements){
-		text->setPosition(text->getPosition() * scale + position * scale);
-	}
+	place_shape(shape, scale, position);
 	return shape;
 }
 
@@ -313,15 +311,10 @@ legs::legs(std::string name)
 
 item_shape legs::get_draw_shape(const mech* owner, client *client,
 	const sf::Vector2f& position){
+
 		float scale = client->get_view_scale();
-
-		for(auto &sprite : item::sprites){
-			sprite.second.setScale(scale, -scale);
-		}
-
-		for(auto &sprite : legs::sprites){
-			sprite.second.setScale(scale, -scale);
-		}
+		set_scale_f(scale, item::sprites);
+		set_scale_f(scale, legs::sprites);
 
 		item_shape shape{};
 		if(this->get_power_status()){
@@ -353,9 +346,7 @@ item_shape legs::get_draw_shape(const mech* owner, client *client,
 				[this](){this->set_mode(legs::mode_name::fast);});
 		}
 
-		for(auto& button : shape.elements){
-			button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
-		}
+		place_shape(shape, scale, position);
 		return shape;
 }
 
@@ -385,7 +376,8 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 mech::mech(uint32_t cell_index_)
 	: unit(cell_index_, 4),
 	energy_text("energy_value", get_font(), 22),
-	heat_text("heat_value", get_font(), 22){
+	heat_text("heat_value", get_font(), 22),
+	fuel_text("fuel_text", get_font(), 22){
 
 	std::string path("./../data/");
 	std::string filename("mech_60x60x6.png");
