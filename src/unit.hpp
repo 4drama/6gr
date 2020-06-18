@@ -64,6 +64,7 @@ inline item_shape& operator+=(item_shape& left, const item_shape& right){
 }
 
 class legs;
+class engine;
 
 class item : std::enable_shared_from_this<item>{
 protected:
@@ -73,6 +74,7 @@ protected:
 	static void load_sprites();
 public:
 	inline virtual legs* is_legs() noexcept {return nullptr;};
+	inline virtual engine* is_engine() noexcept {return nullptr;};
 
 	item(std::string name, float delay);
 
@@ -112,7 +114,7 @@ class legs : public item{
 	static void load_sprites();
 public:
 	legs(std::string name);
-	legs* is_legs() noexcept override {	return this;};
+	inline legs* is_legs() noexcept override {	return this;};
 //	void update(mech* owner, float time);
 
 	inline float get_speed(terrain_en ter_type) const noexcept{
@@ -141,6 +143,32 @@ private:
 	mode modes[(int)mode_name::size];
 
 	inline void set_mode(mode_name mode) noexcept {this->current_mode = mode;};
+};
+
+class engine : public item{
+	static sf::Texture texture;
+	static std::map<std::string, sf::Sprite> sprites;
+
+	static void load_sprites();
+public:
+	engine(std::string name, int threshold);
+	inline engine* is_engine() noexcept override {return this;};
+
+	item_shape get_draw_shape(const mech* owner, client *client,
+		const sf::Vector2f& position) override;
+
+	inline float get_threshold() const noexcept{return (float)threshold / 100.0f;};
+
+private:
+	inline void add_threshold(int value) noexcept{
+		this->threshold += value;
+		this->threshold = this->threshold > 100 ? 100 : this->threshold;
+		this->threshold = this->threshold < 0 ? 0 : this->threshold;
+	};
+
+	int threshold;
+	mutable sf::Text threshold_text;
+	mutable sf::Text threshold_value_text;
 };
 
 struct unit : std::enable_shared_from_this<unit>{
@@ -178,11 +206,14 @@ struct mech_status {
 	float current_heat = 50;
 	float heat_capacity = 300;
 
-	inline static mech_status capacity(float energy, float heat){
-		return mech_status{0, energy, 0, heat};};
+	float current_fuel = 30;
+	float fuel_capacity = 100;
 
-	inline static mech_status current(float energy, float heat){
-		return mech_status{energy, 0, heat, 0};};
+	inline static mech_status capacity(float energy, float heat, float fuel = 0){
+		return mech_status{0, energy, 0, heat, 0, fuel};};
+
+	inline static mech_status current(float energy, float heat, float fuel = 0){
+		return mech_status{energy, 0, heat, 0, fuel, 0};};
 
 	inline mech_status& operator*(float right);
 	inline mech_status& add_capacity(const mech_status& right);
@@ -207,8 +238,11 @@ private:
 
 	mutable sf::Text energy_text;
 	mutable sf::Text heat_text;
+	mutable sf::Text fuel_text;
 
 	legs *legs_ptr = nullptr;
+	engine *engine_ptr = nullptr;
+
 	std::list<std::shared_ptr<item>> left_arm;
 	std::list<std::shared_ptr<item>> torso;
 	std::list<std::shared_ptr<item>> right_arm;

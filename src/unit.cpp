@@ -8,6 +8,9 @@ std::map<std::string, sf::Sprite> item::sprites{};
 sf::Texture legs::texture{};
 std::map<std::string, sf::Sprite> legs::sprites{};
 
+sf::Texture engine::texture{};
+std::map<std::string, sf::Sprite> engine::sprites{};
+
 std::map<std::string, sf::Texture> unit::textures{};
 
 item_button::item_button(sf::Sprite sprite_, std::function<void()> func_)
@@ -196,6 +199,106 @@ void legs::load_sprites(){
 	legs::sprites["fast_off"].setPosition(179, 0);
 };
 
+void engine::load_sprites(){
+	engine::texture.loadFromFile("./../data/engine_button.png");
+
+	engine::sprites["picture"] = sf::Sprite(engine::texture,
+		sf::IntRect(156, 0, 35, 35));
+	engine::sprites["picture"].setPosition(17, 0);
+
+	engine::sprites["threshold_minus_max"] = sf::Sprite(engine::texture,
+		sf::IntRect(86, 0, 35, 35));
+	engine::sprites["threshold_minus_max"].setPosition(17 + 35 + 2, 0);
+
+	engine::sprites["threshold_minus"] = sf::Sprite(engine::texture,
+		sf::IntRect(86, 35, 35, 35));
+	engine::sprites["threshold_minus"].setPosition(17 + 35 + 2, 0);
+
+	engine::sprites["display_off"] = sf::Sprite(engine::texture,
+		sf::IntRect(0, 0, 86, 35));
+	engine::sprites["display_off"].setPosition(91, 0);
+
+	engine::sprites["display_on"] = sf::Sprite(engine::texture,
+		sf::IntRect(0, 35, 86, 35));
+	engine::sprites["display_on"].setPosition(91, 0);
+
+	engine::sprites["threshold_plus_max"] = sf::Sprite(engine::texture,
+		sf::IntRect(121, 0, 35, 35));
+	engine::sprites["threshold_plus_max"].setPosition(17 + 35 + 2 + 35 + 2 + 86 + 2, 0);
+
+	engine::sprites["threshold_plus"] = sf::Sprite(engine::texture,
+		sf::IntRect(121, 35, 35, 35));
+	engine::sprites["threshold_plus"].setPosition(17 + 35 + 2 + 35 + 2 + 86 + 2, 0);
+};
+
+engine::engine(std::string name, int threshold_ = 0)
+	: item(name, 1), threshold(threshold_),
+		threshold_text(std::string("threshold"), get_font(), 20),
+		threshold_value_text(std::to_string(threshold_), get_font(), 21){
+
+	if(engine::sprites.empty())
+		engine::load_sprites();
+}
+
+item_shape engine::get_draw_shape(const mech* owner, client *client,
+	const sf::Vector2f& position){
+
+	float scale = client->get_view_scale();
+
+	for(auto &sprite : item::sprites){
+		sprite.second.setScale(scale, -scale);
+	}
+
+	for(auto &sprite : engine::sprites){
+		sprite.second.setScale(scale, -scale);
+	}
+
+	item_shape shape{};
+	auto add_text = [scale, &shape](sf::Vector2f pos, sf::Text *text,
+		const sf::Color &color = sf::Color::White) {
+
+		text->setScale(scale, -scale);
+		text->setPosition(pos);
+		text->setColor(color);
+		shape.text_elements.push_back(text);
+	};
+
+	shape.elements.emplace_back(engine::sprites["picture"], std::function<void()>());
+	if(this->get_power_status()){
+		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
+		shape.elements.emplace_back(engine::sprites["display_on"], std::function<void()>());
+
+		add_text(sf::Vector2f(95, 3), &this->threshold_text, sf::Color(112, 166, 65));
+		this->threshold_value_text.setString(std::to_string(this->threshold) + std::string("%"));
+		add_text(sf::Vector2f(115, -11), &this->threshold_value_text, sf::Color(112, 166, 65));
+	} else {
+		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
+		shape.elements.emplace_back(engine::sprites["display_off"], std::function<void()>());
+	}
+
+	if(this->threshold == 0){
+		shape.elements.emplace_back(engine::sprites["threshold_minus_max"], std::function<void()>());
+	} else {
+		shape.elements.emplace_back(engine::sprites["threshold_minus"],
+			this->get_power_status() ? [this](){this->add_threshold(-10);} : std::function<void()>());
+	}
+
+	if(this->threshold == 100){
+		shape.elements.emplace_back(engine::sprites["threshold_plus_max"], std::function<void()>());
+	} else {
+		shape.elements.emplace_back(engine::sprites["threshold_plus"],
+			this->get_power_status() ? [this](){this->add_threshold(10);} : std::function<void()>());
+	}
+
+	for(auto& button : shape.elements){
+		button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
+	}
+	for(auto& text : shape.text_elements){
+		text->setPosition(text->getPosition() * scale + position * scale);
+	}
+	return shape;
+}
+
 legs::legs(std::string name)
 	: item(name, 1), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
 
@@ -295,6 +398,7 @@ mech::mech(uint32_t cell_index_)
 	this->left_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
 	this->right_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
 	this->torso.emplace_back(std::make_shared<legs>("Legs"));
+	this->torso.emplace_back(std::make_shared<engine>("Engine"));
 	this->refresh();
 }
 
@@ -311,6 +415,9 @@ void mech::refresh(){
 	for(auto& item : this->torso){
 		if(item->is_legs()){
 			this->legs_ptr = item->is_legs();
+		}
+		if(item->is_engine()){
+			this->engine_ptr = item->is_engine();
 		}
 	}
 }
@@ -344,12 +451,18 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 
 	auto add_bar = [&scale, &shape, &corner, &add_rectangle, &add_text](
 		sf::Vector2f offset, float max_value, float curr_value,
-		sf::Text *text_value, sf::Color value_color){
+		sf::Text *text_value, sf::Color value_color, float threshold = 0){
 
 		add_rectangle(sf::Vector2f(50, 300), offset, sf::Vector2f(0, 0),
 			sf::Color(80, 100, 125));
 		add_rectangle(sf::Vector2f(50, 300 * (curr_value / max_value)), offset,
 			sf::Vector2f(0, 0),	value_color);
+
+		if(threshold != 0){
+			add_rectangle(sf::Vector2f(50, 3), offset,
+				sf::Vector2f(0, 298 * threshold), sf::Color(255, 0, 0));
+		}
+
 		add_rectangle(sf::Vector2f(2, 300), offset, sf::Vector2f(50, 0));
 		add_rectangle(sf::Vector2f(65, 2), offset, sf::Vector2f(0, 300));
 		add_rectangle(sf::Vector2f(52, 2), offset, sf::Vector2f(0, -2));
@@ -367,10 +480,16 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 	};
 
 	add_bar(sf::Vector2f(20, 20), this->status.energy_capacity, this->status.current_energy,
-		 &this->energy_text, sf::Color(111, 189, 80));
+		 &this->energy_text, sf::Color(111, 189, 80),
+		 (engine_ptr && engine_ptr->get_power_status()) ? engine_ptr->get_threshold() : 0);
 
 	add_bar(sf::Vector2f(90, 20), this->status.heat_capacity, this->status.current_heat,
  		 &this->heat_text, sf::Color(136, 52, 14));
+
+	if(this->status.fuel_capacity != 0){
+		add_bar(sf::Vector2f(160, 20), this->status.fuel_capacity, this->status.current_fuel,
+	 		 &this->fuel_text, sf::Color(55, 49, 29));
+	};
 
 	return shape;
 }
