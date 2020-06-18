@@ -114,7 +114,7 @@ sf::Text *update_text_f(float scale, sf::Vector2f pos, sf::Text *text,
 	return text;
 };
 
-void place_shape(item_shape &shape, float scale, const sf::Vector2f& position){
+void place_shape_f(item_shape &shape, float scale, const sf::Vector2f& position){
 	for(auto& button : shape.elements){
 		button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
 	}
@@ -174,7 +174,7 @@ item_shape item::get_draw_shape(const mech* owner, client *client,
 			scale,sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136)));
 	}
 
-	place_shape(shape, scale, position);
+	place_shape_f(shape, scale, position);
 	return shape;
 }
 
@@ -246,13 +246,29 @@ void engine::load_sprites(){
 	engine::sprites["threshold_plus"].setPosition(17 + 35 + 2 + 35 + 2 + 86 + 2, 0);
 };
 
-engine::engine(std::string name, int threshold_ = 0)
-	: item(name, 1), threshold(threshold_),
+engine::engine(std::string name, const mech_status* status_, int threshold_ = 0)
+	: item(name, 1), status(status_), performance{60.0f, 60.0f, 1.0f},
+		threshold(threshold_),
 		threshold_text(std::string("threshold"), get_font(), 20),
 		threshold_value_text(std::to_string(threshold_), get_font(), 21){
 
 	if(engine::sprites.empty())
 		engine::load_sprites();
+}
+
+mech_status engine::get_mech_changes(float time) const noexcept{
+	float fuel =  this->status->current_fuel;
+	float current_energy_rate = this->status->current_energy / this->status->energy_capacity;
+	float necessary_energy_rate = (float)this->threshold / 100.f;
+
+	const auto &perf = this->performance;
+
+	float rate = (fuel - (perf.spend_fuel * time)) < 0 ? fuel / perf.spend_fuel * time : 1.0f;
+	return (current_energy_rate < necessary_energy_rate) && (fuel > 0) &&
+		(this->get_power_status()) ?
+		mech_status::current(perf.receive_energy, perf.receive_heat, -perf.spend_fuel)
+		* time * rate :
+		mech_status::zero();
 }
 
 item_shape engine::get_draw_shape(const mech* owner, client *client,
@@ -293,7 +309,7 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 			this->get_power_status() ? [this](){this->add_threshold(10);} : std::function<void()>());
 	}
 
-	place_shape(shape, scale, position);
+	place_shape_f(shape, scale, position);
 	return shape;
 }
 
@@ -346,7 +362,7 @@ item_shape legs::get_draw_shape(const mech* owner, client *client,
 				[this](){this->set_mode(legs::mode_name::fast);});
 		}
 
-		place_shape(shape, scale, position);
+		place_shape_f(shape, scale, position);
 		return shape;
 }
 
@@ -390,7 +406,7 @@ mech::mech(uint32_t cell_index_)
 	this->left_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
 	this->right_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
 	this->torso.emplace_back(std::make_shared<legs>("Legs"));
-	this->torso.emplace_back(std::make_shared<engine>("Engine"));
+	this->torso.emplace_back(std::make_shared<engine>("Engine", &this->status, 70));
 	this->refresh();
 }
 
@@ -525,16 +541,12 @@ bool mech::interact_gui(game_info *info, client *client){
 	return false;
 }
 
-float mech::move_calculate(float time, terrain_en ter_type) noexcept{
-	if(!this->legs_ptr->get_power_status())
-		return 0;
-
-	float &energy_available = this->status.current_energy;
+float mech::get_available_rate(mech_status necessary) const noexcept{
+	const float &energy_available = this->status.current_energy;
 	float heat_available = this->status.heat_capacity - this->status.current_heat;
 
-	mech_status diff = this->legs_ptr->necessary(time / 10000);
-	float energy_necessary = -diff.current_energy;
-	const float& heat_necessary = diff.current_heat;
+	float energy_necessary = -necessary.current_energy;
+	const float& heat_necessary = necessary.current_heat;
 
 	float rate = 1;
 	if((energy_available < energy_necessary) || (heat_available < heat_necessary)){
@@ -542,6 +554,15 @@ float mech::move_calculate(float time, terrain_en ter_type) noexcept{
 		float heat_rate = heat_available / heat_necessary;
 		rate = energy_rate < heat_rate ? energy_rate : heat_rate;
 	}
+	return rate > 0 ? rate : 0;
+}
+
+float mech::move_calculate(float time, terrain_en ter_type) noexcept{
+	if(!this->legs_ptr->get_power_status())
+		return 0;
+
+	mech_status diff = this->legs_ptr->get_mech_changes_legs(time / 10000);
+	float rate = this->get_available_rate(diff);
 
 	this->status.add_current(diff * rate);
 	return this->get_speed(ter_type) * time * rate;
@@ -603,6 +624,13 @@ void unit::update(game_info *info, uint32_t player_index, float time){
 void mech::update_v(game_info *info, uint32_t player_index, float time){
 	auto item_update = [this, &time](auto &zone){
 		for(auto &item : zone){
+			if(item->is_change_mech_status()){
+				auto change_item = item->is_change_mech_status();
+				mech_status diff = change_item->get_mech_changes(time / 10000);
+				float rate = this->get_available_rate(diff);
+				this->status.add_current(diff * rate);
+			}
+
 			item->update(this, time);
 		}
 	};

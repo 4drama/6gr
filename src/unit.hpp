@@ -66,6 +66,11 @@ inline item_shape& operator+=(item_shape& left, const item_shape& right){
 class legs;
 class engine;
 
+class change_mech_status{
+public:
+	inline virtual mech_status get_mech_changes(float time) const noexcept;
+};
+
 class item : std::enable_shared_from_this<item>{
 protected:
 	static sf::Texture texture;
@@ -75,6 +80,7 @@ protected:
 public:
 	inline virtual legs* is_legs() noexcept {return nullptr;};
 	inline virtual engine* is_engine() noexcept {return nullptr;};
+	inline virtual change_mech_status* is_change_mech_status() noexcept {return nullptr;};
 
 	item(std::string name, float delay);
 
@@ -91,7 +97,6 @@ public:
 	bool get_ready(const mech* owner) const noexcept;
 
 	inline virtual bool has_resources(const mech* owner) const noexcept { return true;};
-
 	virtual void update(mech* owner, float time);
 
 	virtual item_shape get_draw_shape(const mech* owner, client *client,
@@ -115,13 +120,12 @@ class legs : public item{
 public:
 	legs(std::string name);
 	inline legs* is_legs() noexcept override {	return this;};
-//	void update(mech* owner, float time);
 
 	inline float get_speed(terrain_en ter_type) const noexcept{
 		return this->speed[(int)ter_type] * ((float)2 / 10000)
 			* modes[(int)current_mode].rate;};
 
-	inline mech_status necessary(float time) const noexcept;
+	inline mech_status get_mech_changes_legs(float time) const noexcept;
 
 	item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position) override;
@@ -145,14 +149,17 @@ private:
 	inline void set_mode(mode_name mode) noexcept {this->current_mode = mode;};
 };
 
-class engine : public item{
+class engine : public item, public change_mech_status{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
 	static void load_sprites();
 public:
-	engine(std::string name, int threshold);
+	engine(std::string name, const mech_status* status, int threshold);
 	inline engine* is_engine() noexcept override {return this;};
+	inline change_mech_status* is_change_mech_status() noexcept override {return this;};
+
+	mech_status get_mech_changes(float time) const noexcept override;
 
 	item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position) override;
@@ -160,13 +167,21 @@ public:
 	inline float get_threshold() const noexcept{return (float)threshold / 100.0f;};
 
 private:
+	const mech_status* status;
+
+	struct {
+		float receive_energy;
+		float receive_heat;
+		float spend_fuel;
+	} performance;
+
+	int threshold;
 	inline void add_threshold(int value) noexcept{
 		this->threshold += value;
 		this->threshold = this->threshold > 100 ? 100 : this->threshold;
 		this->threshold = this->threshold < 0 ? 0 : this->threshold;
 	};
 
-	int threshold;
 	mutable sf::Text threshold_text;
 	mutable sf::Text threshold_value_text;
 };
@@ -209,6 +224,8 @@ struct mech_status {
 	float current_fuel = 30;
 	float fuel_capacity = 100;
 
+	inline static mech_status zero(){return mech_status{0, 0, 0, 0, 0, 0};};
+
 	inline static mech_status capacity(float energy, float heat, float fuel = 0){
 		return mech_status{0, energy, 0, heat, 0, fuel};};
 
@@ -232,6 +249,8 @@ public:
 
 	void draw_gui(game_info *info, client *client);
 	bool interact_gui(game_info *info, client *client);
+
+	float get_available_rate(mech_status necessary) const noexcept;
 private:
 	item *waiting_confirm = nullptr;
 	mech_status status;
@@ -259,25 +278,32 @@ private:
 inline mech_status& mech_status::operator*(float right){
 	this->current_energy *= right;
 	this->current_heat *= right;
+	this->current_fuel *= right;
 	return *this;
 }
 
 inline mech_status& mech_status::add_capacity(const mech_status& right){
 	this->energy_capacity += right.energy_capacity;
 	this->heat_capacity += right.heat_capacity;
+	this->fuel_capacity += right.fuel_capacity;
 	return *this;
 };
 
 inline mech_status& mech_status::add_current(const mech_status& right){
 	this->current_energy += right.current_energy;
 	this->current_heat += right.current_heat;
+	this->current_fuel += right.current_fuel;
 	return *this;
 };
 
-inline mech_status legs::necessary(float time) const noexcept{
+inline mech_status legs::get_mech_changes_legs(float time) const noexcept{
 	const float& energy = this->modes[(int)current_mode].energy;
 	const float& heat = this->modes[(int)current_mode].heat;
 	return mech_status::current(energy, heat) * time;
 };
+
+inline mech_status change_mech_status::get_mech_changes(float time) const noexcept{
+	return mech_status::zero();
+}
 
 #endif
