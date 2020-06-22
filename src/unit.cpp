@@ -2,15 +2,6 @@
 
 #include <iostream>
 
-sf::Texture item::texture{};
-std::map<std::string, sf::Sprite> item::sprites{};
-
-sf::Texture legs::texture{};
-std::map<std::string, sf::Sprite> legs::sprites{};
-
-sf::Texture engine::texture{};
-std::map<std::string, sf::Sprite> engine::sprites{};
-
 std::map<std::string, sf::Texture> unit::textures{};
 
 item_button::item_button(sf::Sprite sprite_, std::function<void()> func_)
@@ -25,345 +16,6 @@ bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos){
 		return true;
 	else
 		return false;
-}
-
-void item::load_sprites(){
-	item::texture.loadFromFile("./../data/item_button.png");
-
-	sprites["active_button"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 0, 180, 23));
-	sprites["active_button"].setPosition(34, 0);
-
-	sprites["inactive_button"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 23, 180, 23));
-	sprites["inactive_button"].setPosition(34, 0);
-
-	sprites["power_off"] = sf::Sprite(item::texture,
-		sf::IntRect(197, 23, 28, 35));
-	sprites["power_off"].setPosition(-13, 0);
-
-	sprites["power_on"] = sf::Sprite(item::texture,
-		sf::IntRect(225, 23, 28, 35));
-	sprites["power_on"].setPosition(-13, 0);
-
-	sprites["active_hotkey_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(180, 0, 15, 23));
-	sprites["active_hotkey_screen"].setPosition(17, 0);
-
-	sprites["inactive_hotkey_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(180, 23, 15, 23));
-	sprites["inactive_hotkey_screen"].setPosition(17, 0);
-
-	sprites["active_delay_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 46, 197, 10));
-	sprites["active_delay_screen"].setPosition(17, -25);
-
-	sprites["inactive_delay_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 56, 197, 10));
-	sprites["inactive_delay_screen"].setPosition(17, -25);
-
-	sprites["progress_bar_ready"] = sf::Sprite(item::texture,
-		sf::IntRect(195, 0, 35, 6));
-	sprites["progress_bar_ready"].setPosition(22, -27);
-
-	sprites["progress_bar_not_ready"] = sf::Sprite(item::texture,
-		sf::IntRect(195, 6, 35, 6));
-	sprites["progress_bar_not_ready"].setPosition(22, -27);
-
-	sprites["progress_bar_reload_ready"] = sf::Sprite(item::texture,
-		sf::IntRect(195, 12, 35, 6));
-	sprites["progress_bar_reload_ready"].setPosition(22, -27);
-}
-
-item::item(std::string name_, float delay_)
-	: name(name_), delay(delay_), name_text(name, get_font(), 22){
-	if(item::sprites.empty())
-		item::load_sprites();
-	this->name_text.setPosition(39, 5);
-}
-
-bool item::get_ready(const mech* owner) const noexcept{
-	bool status = false;
-	if(this->get_power_status() && (this->get_delay() >= 1) && this->has_resources(owner)){
-		status = true;
-	}
-	return status;
-}
-
-void item::update(mech* owner, float time){
-	if(this->curr_delay < this->delay){
-		this->curr_delay += time;
-	}
-}
-
-namespace{
-
-void set_scale_f(float scale, std::map<std::string, sf::Sprite> &sprites){
-	for(auto &sprite : sprites){
-		sprite.second.setScale(scale, -scale);
-	}
-};
-
-sf::Text *update_text_f(float scale, sf::Vector2f pos, sf::Text *text,
-	const sf::Color &color = sf::Color::White){
-
-	text->setScale(scale, -scale);
-	text->setPosition(pos);
-	text->setColor(color);
-
-	return text;
-};
-
-void place_shape_f(item_shape &shape, float scale, const sf::Vector2f& position){
-	for(auto& button : shape.elements){
-		button.sprite.setPosition(button.sprite.getPosition() * scale + position * scale);
-	}
-	for(auto& text : shape.text_elements){
-		text->setPosition(text->getPosition() * scale + position * scale);
-	}
-};
-
-}
-
-item_shape item::get_draw_shape(const mech* owner, client *client,
-	const sf::Vector2f& position){
-
-	float scale = client->get_view_scale();
-	set_scale_f(scale, item::sprites);
-
-	item_shape shape{};
-	if(this->get_power_status()){
-		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
-		shape.elements.emplace_back(item::sprites["active_hotkey_screen"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["active_delay_screen"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["active_button"], std::function<void()>());
-
-		if(this->get_ready(owner)){
-			for(uint32_t x = 0; x < 190; x += 38){
-				item_button button(item::sprites["progress_bar_ready"], std::function<void()>());
-				button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
-				shape.elements.emplace_back(button);
-			}
-			shape.text_elements.emplace_back(
-				update_text_f(scale, sf::Vector2f(39, 5), &this->name_text));
-		} else {
-			shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
-			float delay_rate = this->get_delay();
-			float progress = 0;
-			for(uint32_t x = 0; x < 190; x += 38){
-				progress += 0.2;
-				if(progress < delay_rate){
-					item_button button(item::sprites["progress_bar_reload_ready"], std::function<void()>());
-					button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
-					shape.elements.emplace_back(button);
-				} else {
-					item_button button(item::sprites["progress_bar_not_ready"], std::function<void()>());
-					button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
-					shape.elements.emplace_back(button);
-				}
-			}
-			shape.text_elements.emplace_back(update_text_f(
-				scale, sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136)));
-		}
-	} else {
-		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
-		shape.elements.emplace_back(item::sprites["inactive_hotkey_screen"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["inactive_delay_screen"], std::function<void()>());
-		shape.text_elements.emplace_back(update_text_f(
-			scale,sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136)));
-	}
-
-	place_shape_f(shape, scale, position);
-	return shape;
-}
-
-void legs::load_sprites(){
-	legs::texture.loadFromFile("./../data/legs_button.png");
-
-	legs::sprites["display_off"] = sf::Sprite(legs::texture,
-		sf::IntRect(0, 0, 86, 35));
-	legs::sprites["display_off"].setPosition(17, 0);
-
-	legs::sprites["display_on"] = sf::Sprite(legs::texture,
-		sf::IntRect(0, 35, 86, 35));
-	legs::sprites["display_on"].setPosition(17, 0);
-
-	legs::sprites["slow_on"] = sf::Sprite(legs::texture,
-		sf::IntRect(86, 0, 35, 35));
-	legs::sprites["slow_on"].setPosition(105, 0);
-
-	legs::sprites["slow_off"] = sf::Sprite(legs::texture,
-		sf::IntRect(86, 35, 35, 35));
-	legs::sprites["slow_off"].setPosition(105, 0);
-
-	legs::sprites["medium_on"] = sf::Sprite(legs::texture,
-		sf::IntRect(121, 0, 35, 35));
-	legs::sprites["medium_on"].setPosition(142, 0);
-
-	legs::sprites["medium_off"] = sf::Sprite(legs::texture,
-		sf::IntRect(121, 35, 35, 35));
-	legs::sprites["medium_off"].setPosition(142, 0);
-
-	legs::sprites["fast_on"] = sf::Sprite(legs::texture,
-		sf::IntRect(156, 0, 35, 35));
-	legs::sprites["fast_on"].setPosition(179, 0);
-
-	legs::sprites["fast_off"] = sf::Sprite(legs::texture,
-		sf::IntRect(156, 35, 35, 35));
-	legs::sprites["fast_off"].setPosition(179, 0);
-};
-
-void engine::load_sprites(){
-	engine::texture.loadFromFile("./../data/engine_button.png");
-
-	engine::sprites["picture"] = sf::Sprite(engine::texture,
-		sf::IntRect(156, 0, 35, 35));
-	engine::sprites["picture"].setPosition(17, 0);
-
-	engine::sprites["threshold_minus_max"] = sf::Sprite(engine::texture,
-		sf::IntRect(86, 0, 35, 35));
-	engine::sprites["threshold_minus_max"].setPosition(17 + 35 + 2, 0);
-
-	engine::sprites["threshold_minus"] = sf::Sprite(engine::texture,
-		sf::IntRect(86, 35, 35, 35));
-	engine::sprites["threshold_minus"].setPosition(17 + 35 + 2, 0);
-
-	engine::sprites["display_off"] = sf::Sprite(engine::texture,
-		sf::IntRect(0, 0, 86, 35));
-	engine::sprites["display_off"].setPosition(91, 0);
-
-	engine::sprites["display_on"] = sf::Sprite(engine::texture,
-		sf::IntRect(0, 35, 86, 35));
-	engine::sprites["display_on"].setPosition(91, 0);
-
-	engine::sprites["threshold_plus_max"] = sf::Sprite(engine::texture,
-		sf::IntRect(121, 0, 35, 35));
-	engine::sprites["threshold_plus_max"].setPosition(17 + 35 + 2 + 35 + 2 + 86 + 2, 0);
-
-	engine::sprites["threshold_plus"] = sf::Sprite(engine::texture,
-		sf::IntRect(121, 35, 35, 35));
-	engine::sprites["threshold_plus"].setPosition(17 + 35 + 2 + 35 + 2 + 86 + 2, 0);
-};
-
-engine::engine(std::string name, const mech_status* status_, int threshold_ = 0)
-	: item(name, 1), status(status_), performance{60.0f, 60.0f, 1.0f},
-		threshold(threshold_),
-		threshold_text(std::string("threshold"), get_font(), 20),
-		threshold_value_text(std::to_string(threshold_), get_font(), 21){
-
-	if(engine::sprites.empty())
-		engine::load_sprites();
-}
-
-mech_status engine::get_mech_changes(float time) const noexcept{
-	float fuel =  this->status->current_fuel;
-	float current_energy_rate = this->status->current_energy / this->status->energy_capacity;
-	float necessary_energy_rate = (float)this->threshold / 100.f;
-
-	const auto &perf = this->performance;
-
-	float rate = (fuel - (perf.spend_fuel * time)) < 0 ? fuel / perf.spend_fuel * time : 1.0f;
-	return (current_energy_rate < necessary_energy_rate) && (fuel > 0) &&
-		(this->get_power_status()) ?
-		mech_status::current(perf.receive_energy, perf.receive_heat, -perf.spend_fuel)
-		* time * rate :
-		mech_status::zero();
-}
-
-item_shape engine::get_draw_shape(const mech* owner, client *client,
-	const sf::Vector2f& position){
-
-	float scale = client->get_view_scale();
-	set_scale_f(scale, item::sprites);
-	set_scale_f(scale, engine::sprites);
-
-	item_shape shape{};
-	shape.elements.emplace_back(engine::sprites["picture"], std::function<void()>());
-	if(this->get_power_status()){
-		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
-		shape.elements.emplace_back(engine::sprites["display_on"], std::function<void()>());
-
-		shape.text_elements.emplace_back(update_text_f(
-			scale, sf::Vector2f(95, 3), &this->threshold_text, sf::Color(112, 166, 65)));
-
-		this->threshold_value_text.setString(std::to_string(this->threshold) + std::string("%"));
-		shape.text_elements.emplace_back(update_text_f(
-			scale, sf::Vector2f(115, -11), &this->threshold_value_text, sf::Color(112, 166, 65)));
-	} else {
-		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
-		shape.elements.emplace_back(engine::sprites["display_off"], std::function<void()>());
-	}
-
-	if(this->threshold == 0){
-		shape.elements.emplace_back(engine::sprites["threshold_minus_max"], std::function<void()>());
-	} else {
-		shape.elements.emplace_back(engine::sprites["threshold_minus"],
-			this->get_power_status() ? [this](){this->add_threshold(-10);} : std::function<void()>());
-	}
-
-	if(this->threshold == 100){
-		shape.elements.emplace_back(engine::sprites["threshold_plus_max"], std::function<void()>());
-	} else {
-		shape.elements.emplace_back(engine::sprites["threshold_plus"],
-			this->get_power_status() ? [this](){this->add_threshold(10);} : std::function<void()>());
-	}
-
-	place_shape_f(shape, scale, position);
-	return shape;
-}
-
-legs::legs(std::string name)
-	: item(name, 1), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
-
-	if(legs::sprites.empty())
-		legs::load_sprites();
-
-	this->speed[(int)terrain_en::RIVER] = 0;
-	this->speed[(int)terrain_en::MOUNTAIN] = 0.5;
-	this->speed[(int)terrain_en::PLAIN] = 2;
-	this->speed[(int)terrain_en::PALM] = 2;
-}
-
-item_shape legs::get_draw_shape(const mech* owner, client *client,
-	const sf::Vector2f& position){
-
-		float scale = client->get_view_scale();
-		set_scale_f(scale, item::sprites);
-		set_scale_f(scale, legs::sprites);
-
-		item_shape shape{};
-		if(this->get_power_status()){
-			shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
-			shape.elements.emplace_back(legs::sprites["display_on"], std::function<void()>());
-		} else {
-			shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
-			shape.elements.emplace_back(legs::sprites["display_off"], std::function<void()>());
-		}
-
-		if(this->current_mode == legs::mode_name::slow){
-			shape.elements.emplace_back(legs::sprites["slow_on"], std::function<void()>());
-		} else {
-			shape.elements.emplace_back(legs::sprites["slow_off"],
-				[this](){this->set_mode(legs::mode_name::slow);});
-		}
-
-		if(this->current_mode == legs::mode_name::medium){
-			shape.elements.emplace_back(legs::sprites["medium_on"], std::function<void()>());
-		} else {
-			shape.elements.emplace_back(legs::sprites["medium_off"],
-				[this](){this->set_mode(legs::mode_name::medium);});
-		}
-
-		if(this->current_mode == legs::mode_name::fast){
-			shape.elements.emplace_back(legs::sprites["fast_on"], std::function<void()>());
-		} else {
-			shape.elements.emplace_back(legs::sprites["fast_off"],
-				[this](){this->set_mode(legs::mode_name::fast);});
-		}
-
-		place_shape_f(shape, scale, position);
-		return shape;
 }
 
 namespace{
@@ -391,6 +43,9 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 
 mech::mech(uint32_t cell_index_)
 	: unit(cell_index_, 4),
+	left_arm{60, mech_status{0, 70, 0, 50, 20, 20}, std::list<std::shared_ptr<item>>{}, 2.0f},
+	torso{60, mech_status{0, 100, 0, 50, 0, 0}, std::list<std::shared_ptr<item>>{}, 1.0f},
+	right_arm{60, mech_status{0, 0, 0, 50, 0, 0}, std::list<std::shared_ptr<item>>{}, 2.0f},
 	energy_text("energy_value", get_font(), 22),
 	heat_text("heat_value", get_font(), 22),
 	fuel_text("fuel_text", get_font(), 22){
@@ -403,24 +58,29 @@ mech::mech(uint32_t cell_index_)
 		create_sprite_f(&unit::textures[filename],
 		60, 60, 0, 0));
 
-	this->left_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
-	this->right_arm.emplace_back(std::make_shared<item>("Rocket", 15000));
-	this->torso.emplace_back(std::make_shared<legs>("Legs"));
-	this->torso.emplace_back(std::make_shared<engine>("Engine", &this->status, 70));
+	this->left_arm.items.emplace_back(std::make_shared<item>("Rocket", 15000));
+	this->right_arm.items.emplace_back(std::make_shared<item>("Rocket", 15000));
+	this->torso.items.emplace_back(std::make_shared<legs>("Legs"));
+	this->torso.items.emplace_back(std::make_shared<engine>("Engine", 70));
 	this->refresh();
 }
 
+float mech::get_speed(terrain_en ter_type) const noexcept{
+	return legs_ptr ? legs_ptr->get_speed(ter_type) : 0;
+};
+
 void mech::refresh(){
 	this->legs_ptr = nullptr;
-	for(auto& item : this->left_arm){
+	this->engine_ptr = nullptr;
+	for(auto& item : this->left_arm.items){
 
 	}
 
-	for(auto& item : this->right_arm){
+	for(auto& item : this->right_arm.items){
 
 	}
 
-	for(auto& item : this->torso){
+	for(auto& item : this->torso.items){
 		if(item->is_legs()){
 			this->legs_ptr = item->is_legs();
 		}
@@ -487,15 +147,17 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 			std::to_string((int)curr_value));
 	};
 
-	add_bar(sf::Vector2f(20, 20), this->status.energy_capacity, this->status.current_energy,
+	auto status = this->accumulate_status();
+
+	add_bar(sf::Vector2f(20, 20), status.energy_capacity, status.current_energy,
 		 &this->energy_text, sf::Color(111, 189, 80),
 		 (engine_ptr && engine_ptr->get_power_status()) ? engine_ptr->get_threshold() : 0);
 
-	add_bar(sf::Vector2f(90, 20), this->status.heat_capacity, this->status.current_heat,
+	add_bar(sf::Vector2f(90, 20), status.heat_capacity, status.current_heat,
  		 &this->heat_text, sf::Color(136, 52, 14));
 
-	if(this->status.fuel_capacity != 0){
-		add_bar(sf::Vector2f(160, 20), this->status.fuel_capacity, this->status.current_fuel,
+	if(status.fuel_capacity != 0){
+		add_bar(sf::Vector2f(160, 20), status.fuel_capacity, status.current_fuel,
 	 		 &this->fuel_text, sf::Color(55, 49, 29));
 	};
 
@@ -512,9 +174,9 @@ item_shape mech::prepare_shape(client *client) const{
 				pos + offset * (float)counter++);
 		}
 	};
-	get_zone_shape(this->torso, sf::Vector2f{-100, -200});
-	get_zone_shape(this->left_arm, sf::Vector2f{-400, -200});
-	get_zone_shape(this->right_arm, sf::Vector2f{200, -200});
+	get_zone_shape(this->torso.items, sf::Vector2f{-100, -200});
+	get_zone_shape(this->left_arm.items, sf::Vector2f{-400, -200});
+	get_zone_shape(this->right_arm.items, sf::Vector2f{200, -200});
 
 	return item_shape;
 }
@@ -541,16 +203,92 @@ bool mech::interact_gui(game_info *info, client *client){
 	return false;
 }
 
+mech_status mech::accumulate_status() const noexcept{
+	mech_status status = mech_status::zero();
+	auto add_part = [&status](const part_of_mech &part){
+		if(part.durability != 0)
+			status += part.status;
+	};
+
+	add_part(this->left_arm);
+	add_part(this->torso);
+	add_part(this->right_arm);
+	return status;
+}
+
+namespace{
+
+std::vector<std::vector<part_of_mech*>> calculate_levels_f(
+	std::vector<part_of_mech*> parts, const std::pair<mech_status::type, float> &val){
+	using parts_container_type = std::vector<part_of_mech*>;
+
+	auto to_remove = [&val](part_of_mech* part){
+		return ((part->durability <= 0.0f) || !(part->status.is_useful(val.first, val.second)));
+	};
+	parts.erase(std::remove_if(parts.begin(), parts.end(), to_remove), parts.end());
+
+	auto more_priority = [](const part_of_mech* left, const part_of_mech* right){
+		return left->priority > right->priority;
+	};
+	std::sort(parts.begin(), parts.end(), more_priority);
+
+	std::vector<parts_container_type> priority_levels{};
+
+	for(auto it = parts.begin(); it != parts.end(); ){
+		auto if_less_then_it = [it](const part_of_mech* part){
+			return part->priority < (*it)->priority;
+		};
+		auto end = std::find_if(it, parts.end(), if_less_then_it);
+		priority_levels.emplace_back(it, end);
+		it = end;
+	}
+	return priority_levels;
+}
+
+}
+
+void mech::calculate_status(const mech_status &status){
+	using parts_container_type = std::vector<part_of_mech*>;
+	using priority_levels_type = std::vector<parts_container_type>;
+
+	auto parts_of_status = status.get();
+
+	parts_container_type parts_of_mech{&this->left_arm, &this->torso, &this->right_arm};
+
+	std::map<mech_status::type, priority_levels_type> priorities_by_type{};
+	for(auto &stat : parts_of_status){
+		priorities_by_type[stat.first] = calculate_levels_f(parts_of_mech, stat);
+	}
+
+	mech_status rest = mech_status::zero();
+	for(auto &part_stat : parts_of_status){
+		const priority_levels_type *curr_priority_ptr = &priorities_by_type[part_stat.first];
+		if(curr_priority_ptr->empty())
+			continue;
+		std::pair<mech_status::type, float> div_part_stat = {
+			part_stat.first, part_stat.second /
+			(uint32_t)priorities_by_type[part_stat.first].front().size() };
+
+		for(auto &priority_part : priorities_by_type[part_stat.first].front()){
+			rest.add_current(priority_part->status.try_spend(div_part_stat));
+		}
+	}
+	if(rest){
+		this->calculate_status(rest);
+	}
+}
+
 float mech::get_available_rate(mech_status necessary) const noexcept{
-	const float &energy_available = this->status.current_energy;
-	float heat_available = this->status.heat_capacity - this->status.current_heat;
+	const mech_status status = this->accumulate_status();
+	const float &energy_available = status.current_energy;
+	float heat_available = status.heat_capacity - status.current_heat;
 
 	float energy_necessary = -necessary.current_energy;
 	const float& heat_necessary = necessary.current_heat;
 
 	float rate = 1;
 	if((energy_available < energy_necessary) || (heat_available < heat_necessary)){
-		float energy_rate = energy_available / energy_necessary;
+		float energy_rate = energy_available / -energy_necessary;
 		float heat_rate = heat_available / heat_necessary;
 		rate = energy_rate < heat_rate ? energy_rate : heat_rate;
 	}
@@ -558,13 +296,15 @@ float mech::get_available_rate(mech_status necessary) const noexcept{
 }
 
 float mech::move_calculate(float time, terrain_en ter_type) noexcept{
+	if(!this->legs_ptr)
+		return 0;
 	if(!this->legs_ptr->get_power_status())
 		return 0;
 
 	mech_status diff = this->legs_ptr->get_mech_changes_legs(time / 10000);
 	float rate = this->get_available_rate(diff);
 
-	this->status.add_current(diff * rate);
+	this->calculate_status(diff * rate);
 	return this->get_speed(ter_type) * time * rate;
 }
 
@@ -626,15 +366,91 @@ void mech::update_v(game_info *info, uint32_t player_index, float time){
 		for(auto &item : zone){
 			if(item->is_change_mech_status()){
 				auto change_item = item->is_change_mech_status();
-				mech_status diff = change_item->get_mech_changes(time / 10000);
+				mech_status diff = change_item->get_mech_changes(time / 10000,
+					this->accumulate_status());
 				float rate = this->get_available_rate(diff);
-				this->status.add_current(diff * rate);
+				this->calculate_status(diff * rate);
 			}
 
 			item->update(this, time);
 		}
 	};
-	item_update(this->torso);
-	item_update(this->left_arm);
-	item_update(this->right_arm);
+	item_update(this->torso.items);
+	item_update(this->left_arm.items);
+	item_update(this->right_arm.items);
+}
+
+std::pair<mech_status::type, float>
+mech_status::try_spend(const std::pair<mech_status::type, float> &val){
+	float rest = 0;
+	auto less_then_zero = [&rest](float &current_status){
+		if(current_status < 0){
+			rest = current_status;
+			current_status = 0;
+		}
+	};
+
+	auto more_then_value = [&rest](float &current_status, float &value){
+		if(current_status > value){
+			rest = current_status - value;
+			current_status = value;
+		}
+	};
+
+	switch(val.first){
+		case mech_status::type::energy :
+			this->current_energy += val.second;
+			less_then_zero(this->current_energy);
+		break;
+
+		case mech_status::type::heat :
+			this->current_heat += val.second;
+			more_then_value(this->current_heat, this->heat_capacity);
+		break;
+
+		case mech_status::type::fuel :
+			this->current_fuel += val.second;
+			less_then_zero(this->current_energy);
+		break;
+	}
+	return {val.first, rest};
+}
+
+mech_status& mech_status::add_current(const std::pair<mech_status::type, float> &val){
+	switch(val.first){
+		case mech_status::type::energy : this->current_energy += val.second;
+		break;
+
+		case mech_status::type::heat : this->current_heat += val.second;
+		break;
+
+		case mech_status::type::fuel : this->current_fuel += val.second;
+		break;
+	}
+	return *this;
+}
+
+mech_status mech_status::try_spend(const mech_status& right){
+	mech_status rest = mech_status::zero();
+	auto parts = right.get();
+	for(auto &part : parts){
+		auto part_rest = try_spend(part);
+		rest.add_current(part_rest);
+	}
+	return rest;
+};
+
+bool mech_status::is_useful(mech_status::type type, float value) const noexcept{
+	switch(type){
+		case mech_status::type::energy :
+			return value < 0 ? (this->current_energy > 0.0f) : true;
+
+		case mech_status::type::heat :
+			return value > 0 ? (this->current_heat < this->heat_capacity) : true;
+
+		case mech_status::type::fuel :
+			return value < 0 ? (this->current_fuel > 0.0f) : true;
+		default:
+			return false;
+	}
 }
