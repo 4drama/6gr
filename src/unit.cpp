@@ -161,6 +161,22 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 	 		 &this->fuel_text, sf::Color(55, 49, 29));
 	};
 
+	auto zone_debug = [&add_rectangle](sf::Vector2f offset, const mech_status &stat){
+		add_rectangle(sf::Vector2f(20, stat.current_energy),
+			offset, sf::Vector2f(0, 0),
+			stat.current_energy <= stat.energy_capacity ?
+			sf::Color(0, 255, 0) : sf::Color(255, 255, 255));
+
+		add_rectangle(sf::Vector2f(20, -stat.current_heat),
+			offset, sf::Vector2f(0, 0),
+			stat.current_heat <= stat.heat_capacity ?
+			sf::Color(255, 0, 0) : sf::Color(255, 255, 255));
+	};
+
+	zone_debug(sf::Vector2f(20, 500), this->left_arm.status);
+	zone_debug(sf::Vector2f(50, 520), this->torso.status);
+	zone_debug(sf::Vector2f(80, 500), this->right_arm.status);
+
 	return shape;
 }
 
@@ -223,7 +239,9 @@ std::vector<std::vector<part_of_mech*>> calculate_levels_f(
 	using parts_container_type = std::vector<part_of_mech*>;
 
 	auto to_remove = [&val](part_of_mech* part){
-		return ((part->durability <= 0.0f) || !(part->status.is_useful(val.first, val.second)));
+		return ((part->durability <= 0.0f) ||
+		( is_store(val) ? (part->status.is_full(val.first)) :
+		!(part->status.is_useful(val.first, val.second))));
 	};
 	parts.erase(std::remove_if(parts.begin(), parts.end(), to_remove), parts.end());
 
@@ -252,7 +270,6 @@ void mech::calculate_status(const mech_status &status){
 	using priority_levels_type = std::vector<parts_container_type>;
 
 	auto parts_of_status = status.get();
-
 	parts_container_type parts_of_mech{&this->left_arm, &this->torso, &this->right_arm};
 
 	std::map<mech_status::type, priority_levels_type> priorities_by_type{};
@@ -265,11 +282,15 @@ void mech::calculate_status(const mech_status &status){
 		const priority_levels_type *curr_priority_ptr = &priorities_by_type[part_stat.first];
 		if(curr_priority_ptr->empty())
 			continue;
-		std::pair<mech_status::type, float> div_part_stat = {
-			part_stat.first, part_stat.second /
-			(uint32_t)priorities_by_type[part_stat.first].front().size() };
 
-		for(auto &priority_part : priorities_by_type[part_stat.first].front()){
+		const parts_container_type *curr_parts_ptr = is_store(part_stat) ?
+			&priorities_by_type[part_stat.first].back() :
+			&priorities_by_type[part_stat.first].front();
+
+		std::pair<mech_status::type, float> div_part_stat = {
+			part_stat.first, part_stat.second / (uint32_t)curr_parts_ptr->size() };
+
+		for(auto &priority_part : *curr_parts_ptr){
 			rest.add_current(priority_part->status.try_spend(div_part_stat));
 		}
 	}
@@ -401,16 +422,19 @@ mech_status::try_spend(const std::pair<mech_status::type, float> &val){
 		case mech_status::type::energy :
 			this->current_energy += val.second;
 			less_then_zero(this->current_energy);
+			more_then_value(this->current_energy, this->energy_capacity);
 		break;
 
 		case mech_status::type::heat :
 			this->current_heat += val.second;
+			less_then_zero(this->current_heat);
 			more_then_value(this->current_heat, this->heat_capacity);
 		break;
 
 		case mech_status::type::fuel :
 			this->current_fuel += val.second;
-			less_then_zero(this->current_energy);
+			less_then_zero(this->current_fuel);
+			more_then_value(this->current_fuel, this->fuel_capacity);
 		break;
 	}
 	return {val.first, rest};
@@ -450,6 +474,36 @@ bool mech_status::is_useful(mech_status::type type, float value) const noexcept{
 
 		case mech_status::type::fuel :
 			return value < 0 ? (this->current_fuel > 0.0f) : true;
+		default:
+			return false;
+	}
+}
+
+bool mech_status::is_full(mech_status::type type) const noexcept{
+	switch(type){
+		case mech_status::type::energy :
+			return this->current_energy >= this->energy_capacity ? true : false;
+
+		case mech_status::type::heat :
+			return this->current_heat <= 0 ? true : false;
+
+		case mech_status::type::fuel :
+			return this->current_fuel >= this->fuel_capacity ? true : false;
+		default:
+			return false;
+	}
+}
+
+bool is_store(const std::pair<mech_status::type, float> &val){
+	switch(val.first){
+		case mech_status::type::energy :
+			return val.second > 0 ? true : false;
+
+		case mech_status::type::heat :
+			return val.second < 0 ? true : false;
+
+		case mech_status::type::fuel :
+			return val.second > 0 ? true : false;
 		default:
 			return false;
 	}

@@ -67,8 +67,8 @@ struct mech_status {
 	inline std::list<std::pair<mech_status::type, float>> get() const;
 
 	bool is_useful(mech_status::type type, float value) const noexcept;
-/*	bool is_full(mech_status::type type) const noexcept;
-	bool is_empty(mech_status::type type) const noexcept;*/
+	bool is_full(mech_status::type type) const noexcept;
+/*	bool is_empty(mech_status::type type) const noexcept;*/
 
 	inline static mech_status zero(){return mech_status{0, 0, 0, 0, 0, 0};};
 
@@ -97,6 +97,9 @@ struct mech_status {
 
 	inline operator bool() const;
 };
+
+bool is_store(const std::pair<mech_status::type, float> &val);
+inline bool is_spend(const std::pair<mech_status::type, float> &val){ return !is_store(val);}
 
 struct part_of_mech{
 	float durability = 10;
