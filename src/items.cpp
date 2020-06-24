@@ -388,3 +388,27 @@ mech_status change_mech_status::get_mech_changes(
 	float time, const mech_status &status) const noexcept{
 	return mech_status::zero();
 }
+
+accumulator::accumulator(std::string name, float capacity_)
+	: item(name), capacity(capacity_){
+};
+
+mech_status accumulator::get() const noexcept{
+	return mech_status::capacity(this->capacity, 0, 0);
+}
+
+radiator::radiator(std::string name, float capacity_)
+	: item(name), capacity(capacity_){
+};
+
+mech_status radiator::get() const noexcept{
+	return mech_status::capacity(0, this->capacity, 0);
+}
+
+tank::tank(std::string name, float capacity_)
+	: item(name), capacity(capacity_){
+};
+
+mech_status tank::get() const noexcept{
+	return mech_status::capacity(0, 0, this->capacity);
+}

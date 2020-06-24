@@ -37,6 +37,9 @@ struct item_shape{
 
 		return *this;
 	}
+
+	inline operator bool() const{
+		return !(elements.empty() && text_elements.empty() && bar_elements.empty());};
 };
 
 inline const item_shape operator+(const item_shape& left, const item_shape& right){
@@ -64,6 +67,7 @@ class engine;
 class change_mech_status;
 class turn_on;
 class weapon;
+class capacity_change;
 
 class item_base{
 public:
@@ -72,11 +76,18 @@ public:
 	inline virtual change_mech_status* is_change_mech_status() noexcept {return nullptr;};
 	inline virtual turn_on* is_turn_on() noexcept {return nullptr;};
 	inline virtual weapon* is_weapon() noexcept {return nullptr;};
+	inline virtual capacity_change* is_capacity_change() noexcept {return nullptr;};
 
 	inline virtual bool get_power_status() const noexcept{ return true;};
 
 	inline virtual item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position){return item_shape{};};
+};
+
+class capacity_change : public virtual item_base{
+public:
+	inline capacity_change* is_capacity_change() noexcept override {return this;};
+	virtual mech_status get() const noexcept = 0;
 };
 
 class turn_on : public virtual item_base{
@@ -207,6 +218,30 @@ private:
 
 	mutable sf::Text threshold_text;
 	mutable sf::Text threshold_value_text;
+};
+
+class accumulator : public item, public capacity_change{
+public:
+	accumulator(std::string name, float capacity_);
+	mech_status get() const noexcept;
+private:
+	float capacity = 0;
+};
+
+class radiator : public item, public capacity_change{
+public:
+	radiator(std::string name, float capacity_);
+	mech_status get() const noexcept;
+private:
+	float capacity = 0;
+};
+
+class tank : public item, public capacity_change{
+public:
+	tank(std::string name, float capacity_);
+	mech_status get() const noexcept;
+private:
+	float capacity = 0;
 };
 
 #endif

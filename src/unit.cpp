@@ -43,9 +43,9 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 
 mech::mech(uint32_t cell_index_)
 	: unit(cell_index_, 4),
-	left_arm{60, mech_status{0, 70, 0, 50, 20, 20}, std::list<std::shared_ptr<item>>{}, 2.0f},
-	torso{60, mech_status{0, 100, 0, 50, 0, 0}, std::list<std::shared_ptr<item>>{}, 1.0f},
-	right_arm{60, mech_status{0, 0, 0, 50, 0, 0}, std::list<std::shared_ptr<item>>{}, 2.0f},
+	left_arm{60, mech_status::zero(), std::list<std::shared_ptr<item>>{}, 2.0f},
+	torso{60, mech_status::zero(), std::list<std::shared_ptr<item>>{}, 1.0f},
+	right_arm{60, mech_status::zero(), std::list<std::shared_ptr<item>>{}, 2.0f},
 	energy_text("energy_value", get_font(), 22),
 	heat_text("heat_value", get_font(), 22),
 	fuel_text("fuel_text", get_font(), 22){
@@ -59,10 +59,21 @@ mech::mech(uint32_t cell_index_)
 		60, 60, 0, 0));
 
 	this->left_arm.items.emplace_back(std::make_shared<weapon>("Rocket", 15000));
+	this->left_arm.items.emplace_back(std::make_shared<radiator>("Radiator", 75));
+	this->left_arm.items.emplace_back(std::make_shared<accumulator>("Accumulator", 50));
+
 	this->right_arm.items.emplace_back(std::make_shared<weapon>("Rocket", 15000));
+	this->right_arm.items.emplace_back(std::make_shared<radiator>("Radiator", 75));
+	this->right_arm.items.emplace_back(std::make_shared<accumulator>("Accumulator", 50));
+
 	this->torso.items.emplace_back(std::make_shared<legs>("Legs"));
 	this->torso.items.emplace_back(std::make_shared<engine>("Engine", 70));
+	this->torso.items.emplace_back(std::make_shared<tank>("Tank", 20));
+	this->torso.items.emplace_back(std::make_shared<radiator>("Radiator", 200));
+	this->torso.items.emplace_back(std::make_shared<accumulator>("Accumulator", 100));
 	this->refresh();
+
+	this->calculate_status(mech_status::current(0, 0, 20));
 }
 
 float mech::get_speed(terrain_en ter_type) const noexcept{
@@ -72,12 +83,28 @@ float mech::get_speed(terrain_en ter_type) const noexcept{
 void mech::refresh(){
 	this->legs_ptr = nullptr;
 	this->engine_ptr = nullptr;
-	for(auto& item : this->left_arm.items){
+	auto clear_capacity = [](mech_status &status){
+		status.energy_capacity = 0;
+		status.heat_capacity = 0;
+		status.fuel_capacity = 0;
+	};
 
+	clear_capacity(left_arm.status);
+	clear_capacity(right_arm.status);
+	clear_capacity(torso.status);
+
+	for(auto& item : this->left_arm.items){
+		if(item->is_capacity_change()){
+			capacity_change* item_ptr = item->is_capacity_change();
+			this->left_arm.status += item_ptr->get();
+		}
 	}
 
 	for(auto& item : this->right_arm.items){
-
+		if(item->is_capacity_change()){
+			capacity_change* item_ptr = item->is_capacity_change();
+			this->right_arm.status += item_ptr->get();
+		}
 	}
 
 	for(auto& item : this->torso.items){
@@ -86,6 +113,10 @@ void mech::refresh(){
 		}
 		if(item->is_engine()){
 			this->engine_ptr = item->is_engine();
+		}
+		if(item->is_capacity_change()){
+			capacity_change* item_ptr = item->is_capacity_change();
+			this->torso.status += item_ptr->get();
 		}
 	}
 }
@@ -162,12 +193,12 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 	};
 
 	auto zone_debug = [&add_rectangle](sf::Vector2f offset, const mech_status &stat){
-		add_rectangle(sf::Vector2f(20, stat.current_energy),
+		add_rectangle(sf::Vector2f(20, stat.current_energy / 3),
 			offset, sf::Vector2f(0, 0),
 			stat.current_energy <= stat.energy_capacity ?
 			sf::Color(0, 255, 0) : sf::Color(255, 255, 255));
 
-		add_rectangle(sf::Vector2f(20, -stat.current_heat),
+		add_rectangle(sf::Vector2f(20, -stat.current_heat / 3),
 			offset, sf::Vector2f(0, 0),
 			stat.current_heat <= stat.heat_capacity ?
 			sf::Color(255, 0, 0) : sf::Color(255, 255, 255));
@@ -186,8 +217,12 @@ item_shape mech::prepare_shape(client *client) const{
 		sf::Vector2f offset(0, 40);
 		uint32_t counter = 0;
 		for(auto &item : zone){
-			item_shape += item->get_draw_shape(this, client,
-				pos + offset * (float)counter++);
+			auto tmp_shape = item->get_draw_shape(this, client,
+				pos + offset * (float)counter);
+			if(tmp_shape){
+				item_shape += tmp_shape;
+				++counter;
+			}
 		}
 	};
 	get_zone_shape(this->torso.items, sf::Vector2f{-100, -200});
