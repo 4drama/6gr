@@ -58,8 +58,8 @@ mech::mech(uint32_t cell_index_)
 		create_sprite_f(&unit::textures[filename],
 		60, 60, 0, 0));
 
-	this->left_arm.items.emplace_back(std::make_shared<item>("Rocket", 15000));
-	this->right_arm.items.emplace_back(std::make_shared<item>("Rocket", 15000));
+	this->left_arm.items.emplace_back(std::make_shared<weapon>("Rocket", 15000));
+	this->right_arm.items.emplace_back(std::make_shared<weapon>("Rocket", 15000));
 	this->torso.items.emplace_back(std::make_shared<legs>("Legs"));
 	this->torso.items.emplace_back(std::make_shared<engine>("Engine", 70));
 	this->refresh();

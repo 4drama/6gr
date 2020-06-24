@@ -1,13 +1,16 @@
 #include "items.hpp"
 
-sf::Texture item::texture{};
-std::map<std::string, sf::Sprite> item::sprites{};
+sf::Texture weapon::texture{};
+std::map<std::string, sf::Sprite> weapon::sprites{};
 
 sf::Texture legs::texture{};
 std::map<std::string, sf::Sprite> legs::sprites{};
 
 sf::Texture engine::texture{};
 std::map<std::string, sf::Sprite> engine::sprites{};
+
+sf::Texture turn_on::texture{};
+std::map<std::string, sf::Sprite> turn_on::sprites{};
 
 namespace{
 
@@ -38,62 +41,53 @@ void place_shape_f(item_shape &shape, float scale, const sf::Vector2f& position)
 
 }
 
-void item::load_sprites(){
-	item::texture.loadFromFile("./../data/item_button.png");
+turn_on::turn_on(bool power_status_ = false)
+	: power_status(power_status_){
 
-	sprites["active_button"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 0, 180, 23));
-	sprites["active_button"].setPosition(34, 0);
+	if(turn_on::sprites.empty())
+		turn_on::load_turn_on_sprite();
+}
 
-	sprites["inactive_button"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 23, 180, 23));
-	sprites["inactive_button"].setPosition(34, 0);
+void turn_on::load_turn_on_sprite(){
+	turn_on::texture.loadFromFile("./../data/item_turn_on.png");
 
-	sprites["power_off"] = sf::Sprite(item::texture,
-		sf::IntRect(197, 23, 28, 35));
+	sprites["power_off"] = sf::Sprite(turn_on::texture,
+		sf::IntRect(0, 0, 28, 35));
 	sprites["power_off"].setPosition(-13, 0);
 
-	sprites["power_on"] = sf::Sprite(item::texture,
-		sf::IntRect(225, 23, 28, 35));
+	sprites["power_on"] = sf::Sprite(turn_on::texture,
+		sf::IntRect(28, 0, 28, 35));
 	sprites["power_on"].setPosition(-13, 0);
+};
 
-	sprites["active_hotkey_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(180, 0, 15, 23));
-	sprites["active_hotkey_screen"].setPosition(17, 0);
+item_shape turn_on::get_draw_shape(const mech* owner, client *client,
+	const sf::Vector2f& position){
 
-	sprites["inactive_hotkey_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(180, 23, 15, 23));
-	sprites["inactive_hotkey_screen"].setPosition(17, 0);
+	float scale = client->get_view_scale();
+	set_scale_f(scale, turn_on::sprites);
 
-	sprites["active_delay_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 46, 197, 10));
-	sprites["active_delay_screen"].setPosition(17, -25);
+	item_shape shape{};
+	if(this->get_power_status()){
+		shape.elements.emplace_back(turn_on::sprites["power_on"],
+			[this](){this->power_switch(false);});
+	} else {
+		shape.elements.emplace_back(turn_on::sprites["power_off"],
+			[this](){this->power_switch(true);});
+	}
 
-	sprites["inactive_delay_screen"] = sf::Sprite(item::texture,
-		sf::IntRect(0, 56, 197, 10));
-	sprites["inactive_delay_screen"].setPosition(17, -25);
-
-	sprites["progress_bar_ready"] = sf::Sprite(item::texture,
-		sf::IntRect(195, 0, 35, 6));
-	sprites["progress_bar_ready"].setPosition(22, -27);
-
-	sprites["progress_bar_not_ready"] = sf::Sprite(item::texture,
-		sf::IntRect(195, 6, 35, 6));
-	sprites["progress_bar_not_ready"].setPosition(22, -27);
-
-	sprites["progress_bar_reload_ready"] = sf::Sprite(item::texture,
-		sf::IntRect(195, 12, 35, 6));
-	sprites["progress_bar_reload_ready"].setPosition(22, -27);
+	place_shape_f(shape, scale, position);
+	return shape;
 }
 
-item::item(std::string name_, float delay_)
-	: name(name_), delay(delay_), name_text(name, get_font(), 22){
-	if(item::sprites.empty())
-		item::load_sprites();
-	this->name_text.setPosition(39, 5);
+weapon::weapon(std::string name, float delay_)
+	: item(name), delay(delay_), text(name, get_font(), 22){
+	if(weapon::sprites.empty())
+		weapon::load_sprites();
+	this->text.setPosition(39, 5);
 }
 
-bool item::get_ready(const mech* owner) const noexcept{
+
+bool weapon::get_ready(const mech* owner) const noexcept{
 	bool status = false;
 	if(this->get_power_status() && (this->get_delay() >= 1) && this->has_resources(owner)){
 		status = true;
@@ -101,59 +95,101 @@ bool item::get_ready(const mech* owner) const noexcept{
 	return status;
 }
 
-void item::update(mech* owner, float time){
+void weapon::update(mech* owner, float time){
 	if(this->curr_delay < this->delay){
 		this->curr_delay += time;
 	}
 }
 
-item_shape item::get_draw_shape(const mech* owner, client *client,
+void weapon::load_sprites(){
+	weapon::texture.loadFromFile("./../data/weapon_button.png");
+
+	sprites["active_button"] = sf::Sprite(weapon::texture,
+		sf::IntRect(0, 0, 180, 23));
+	sprites["active_button"].setPosition(34, 0);
+
+	sprites["inactive_button"] = sf::Sprite(weapon::texture,
+		sf::IntRect(0, 23, 180, 23));
+	sprites["inactive_button"].setPosition(34, 0);
+
+	sprites["active_hotkey_screen"] = sf::Sprite(weapon::texture,
+		sf::IntRect(180, 0, 15, 23));
+	sprites["active_hotkey_screen"].setPosition(17, 0);
+
+	sprites["inactive_hotkey_screen"] = sf::Sprite(weapon::texture,
+		sf::IntRect(180, 23, 15, 23));
+	sprites["inactive_hotkey_screen"].setPosition(17, 0);
+
+	sprites["active_delay_screen"] = sf::Sprite(weapon::texture,
+		sf::IntRect(0, 46, 197, 10));
+	sprites["active_delay_screen"].setPosition(17, -25);
+
+	sprites["inactive_delay_screen"] = sf::Sprite(weapon::texture,
+		sf::IntRect(0, 56, 197, 10));
+	sprites["inactive_delay_screen"].setPosition(17, -25);
+
+	sprites["progress_bar_ready"] = sf::Sprite(weapon::texture,
+		sf::IntRect(195, 0, 35, 6));
+	sprites["progress_bar_ready"].setPosition(22, -27);
+
+	sprites["progress_bar_not_ready"] = sf::Sprite(weapon::texture,
+		sf::IntRect(195, 6, 35, 6));
+	sprites["progress_bar_not_ready"].setPosition(22, -27);
+
+	sprites["progress_bar_reload_ready"] = sf::Sprite(weapon::texture,
+		sf::IntRect(195, 12, 35, 6));
+	sprites["progress_bar_reload_ready"].setPosition(22, -27);
+}
+
+item::item(std::string name_)
+	: name(name_){
+}
+
+item_shape weapon::get_draw_shape(const mech* owner, client *client,
 	const sf::Vector2f& position){
 
 	float scale = client->get_view_scale();
-	set_scale_f(scale, item::sprites);
+	set_scale_f(scale, weapon::sprites);
 
 	item_shape shape{};
 	if(this->get_power_status()){
-		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
-		shape.elements.emplace_back(item::sprites["active_hotkey_screen"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["active_delay_screen"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["active_button"], std::function<void()>());
+		shape.elements.emplace_back(weapon::sprites["active_hotkey_screen"], std::function<void()>());
+		shape.elements.emplace_back(weapon::sprites["active_delay_screen"], std::function<void()>());
+		shape.elements.emplace_back(weapon::sprites["active_button"], std::function<void()>());
 
 		if(this->get_ready(owner)){
 			for(uint32_t x = 0; x < 190; x += 38){
-				item_button button(item::sprites["progress_bar_ready"], std::function<void()>());
+				item_button button(weapon::sprites["progress_bar_ready"], std::function<void()>());
 				button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
 				shape.elements.emplace_back(button);
 			}
 			shape.text_elements.emplace_back(
-				update_text_f(scale, sf::Vector2f(39, 5), &this->name_text));
+				update_text_f(scale, sf::Vector2f(39, 5), &this->text));
 		} else {
-			shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
+			shape.elements.emplace_back(weapon::sprites["inactive_button"], std::function<void()>());
 			float delay_rate = this->get_delay();
 			float progress = 0;
 			for(uint32_t x = 0; x < 190; x += 38){
 				progress += 0.2;
 				if(progress < delay_rate){
-					item_button button(item::sprites["progress_bar_reload_ready"], std::function<void()>());
+					item_button button(weapon::sprites["progress_bar_reload_ready"], std::function<void()>());
 					button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
 					shape.elements.emplace_back(button);
 				} else {
-					item_button button(item::sprites["progress_bar_not_ready"], std::function<void()>());
+					item_button button(weapon::sprites["progress_bar_not_ready"], std::function<void()>());
 					button.sprite.setPosition(button.sprite.getPosition() + sf::Vector2f(x, 0));
 					shape.elements.emplace_back(button);
 				}
 			}
 			shape.text_elements.emplace_back(update_text_f(
-				scale, sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136)));
+				scale, sf::Vector2f(40, 5), &this->text, sf::Color(140, 136, 136)));
 		}
 	} else {
-		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
-		shape.elements.emplace_back(item::sprites["inactive_hotkey_screen"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["inactive_button"], std::function<void()>());
-		shape.elements.emplace_back(item::sprites["inactive_delay_screen"], std::function<void()>());
+		shape.elements.emplace_back(weapon::sprites["inactive_hotkey_screen"], std::function<void()>());
+		shape.elements.emplace_back(weapon::sprites["inactive_button"], std::function<void()>());
+		shape.elements.emplace_back(weapon::sprites["inactive_delay_screen"], std::function<void()>());
 		shape.text_elements.emplace_back(update_text_f(
-			scale,sf::Vector2f(40, 5), &this->name_text, sf::Color(140, 136, 136)));
+			scale,sf::Vector2f(40, 5), &this->text, sf::Color(140, 136, 136)));
 	}
 
 	place_shape_f(shape, scale, position);
@@ -229,7 +265,7 @@ void engine::load_sprites(){
 };
 
 engine::engine(std::string name, int threshold_ = 0)
-	: item(name, 1), performance{60.0f, 60.0f, 1.0f},
+	: item(name), performance{60.0f, 60.0f, 1.0f},
 		threshold(threshold_),
 		threshold_text(std::string("threshold"), get_font(), 20),
 		threshold_value_text(std::to_string(threshold_), get_font(), 21){
@@ -257,13 +293,11 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 	const sf::Vector2f& position){
 
 	float scale = client->get_view_scale();
-	set_scale_f(scale, item::sprites);
 	set_scale_f(scale, engine::sprites);
 
 	item_shape shape{};
 	shape.elements.emplace_back(engine::sprites["picture"], std::function<void()>());
 	if(this->get_power_status()){
-		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
 		shape.elements.emplace_back(engine::sprites["display_on"], std::function<void()>());
 
 		shape.text_elements.emplace_back(update_text_f(
@@ -273,7 +307,6 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 		shape.text_elements.emplace_back(update_text_f(
 			scale, sf::Vector2f(115, -11), &this->threshold_value_text, sf::Color(112, 166, 65)));
 	} else {
-		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
 		shape.elements.emplace_back(engine::sprites["display_off"], std::function<void()>());
 	}
 
@@ -292,11 +325,12 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 	}
 
 	place_shape_f(shape, scale, position);
+	shape += turn_on::get_draw_shape(owner, client, position);
 	return shape;
 }
 
 legs::legs(std::string name)
-	: item(name, 1), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
+	: item(name), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
 
 	if(legs::sprites.empty())
 		legs::load_sprites();
@@ -311,32 +345,26 @@ item_shape legs::get_draw_shape(const mech* owner, client *client,
 	const sf::Vector2f& position){
 
 	float scale = client->get_view_scale();
-	set_scale_f(scale, item::sprites);
 	set_scale_f(scale, legs::sprites);
 
 	item_shape shape{};
 	if(this->get_power_status()){
-		shape.elements.emplace_back(item::sprites["power_on"], [this](){this->power_switch(false);});
 		shape.elements.emplace_back(legs::sprites["display_on"], std::function<void()>());
 	} else {
-		shape.elements.emplace_back(item::sprites["power_off"], [this](){this->power_switch(true);});
 		shape.elements.emplace_back(legs::sprites["display_off"], std::function<void()>());
 	}
-
 	if(this->current_mode == legs::mode_name::slow){
 		shape.elements.emplace_back(legs::sprites["slow_on"], std::function<void()>());
 	} else {
 		shape.elements.emplace_back(legs::sprites["slow_off"],
 			[this](){this->set_mode(legs::mode_name::slow);});
 	}
-
 	if(this->current_mode == legs::mode_name::medium){
 		shape.elements.emplace_back(legs::sprites["medium_on"], std::function<void()>());
 	} else {
 		shape.elements.emplace_back(legs::sprites["medium_off"],
 			[this](){this->set_mode(legs::mode_name::medium);});
 	}
-
 	if(this->current_mode == legs::mode_name::fast){
 		shape.elements.emplace_back(legs::sprites["fast_on"], std::function<void()>());
 	} else {
@@ -345,6 +373,7 @@ item_shape legs::get_draw_shape(const mech* owner, client *client,
 	}
 
 	place_shape_f(shape, scale, position);
+	shape += turn_on::get_draw_shape(owner, client, position);
 	return shape;
 }
 

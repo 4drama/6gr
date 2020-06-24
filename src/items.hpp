@@ -62,12 +62,40 @@ inline item_shape& operator+=(item_shape& left, const item_shape& right){
 class legs;
 class engine;
 class change_mech_status;
+class turn_on;
+class weapon;
 
 class item_base{
 public:
 	inline virtual legs* is_legs() noexcept {return nullptr;};
 	inline virtual engine* is_engine() noexcept {return nullptr;};
 	inline virtual change_mech_status* is_change_mech_status() noexcept {return nullptr;};
+	inline virtual turn_on* is_turn_on() noexcept {return nullptr;};
+	inline virtual weapon* is_weapon() noexcept {return nullptr;};
+
+	inline virtual bool get_power_status() const noexcept{ return true;};
+
+	inline virtual item_shape get_draw_shape(const mech* owner, client *client,
+		const sf::Vector2f& position){return item_shape{};};
+};
+
+class turn_on : public virtual item_base{
+public:
+	turn_on(bool power_status);
+	inline turn_on* is_turn_on() noexcept override {return this;};
+
+	inline bool get_power_status() const noexcept{ return power_status;};
+	inline void power_switch() noexcept{ power_status = power_status ? false : true;};
+	inline void power_switch(bool status) noexcept{ this->power_status = status;};
+
+	virtual item_shape get_draw_shape(const mech* owner, client *client,
+		const sf::Vector2f& position);
+private:
+	bool power_status;
+protected:
+	static sf::Texture texture;
+	static std::map<std::string, sf::Sprite> sprites;
+	static void load_turn_on_sprite();
 };
 
 class change_mech_status : public virtual item_base{
@@ -78,43 +106,40 @@ public:
 };
 
 class item : public virtual item_base, std::enable_shared_from_this<item>{
-protected:
+public:
+	item(std::string name);
+
+	inline const std::string& get_name() const noexcept{ return this->name;};
+	inline virtual void update(mech* owner, float time){};
+private:
+	std::string name;
+};
+
+class weapon : public item{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
 	static void load_sprites();
 public:
-	item(std::string name, float delay);
+	inline weapon* is_weapon() noexcept override {return this;};
 
-	inline const bool& get_power_status() const noexcept{ return power_status;};
-	inline void power_switch() noexcept{ power_status = power_status ? false : true;};
-	inline void power_switch(bool status) noexcept{ this->power_status = status;};
+	weapon(std::string name, float delay);
+	void update(mech* owner, float time) override;
 
-	inline const std::string& get_name() const noexcept{ return this->name;};
-
-	inline const sf::Keyboard::Key& get_hotkey() const noexcept { return this->key;};
-	inline void set_hotkey(sf::Keyboard::Key key_) noexcept { this->key = key_;};
-
+	inline bool has_resources(const mech* owner) const noexcept { return true;};
 	inline float get_delay() const noexcept { return curr_delay / delay;};
 	bool get_ready(const mech* owner) const noexcept;
 
-	inline virtual bool has_resources(const mech* owner) const noexcept { return true;};
-	virtual void update(mech* owner, float time);
-
-	virtual item_shape get_draw_shape(const mech* owner, client *client,
-		const sf::Vector2f& position);
+	item_shape get_draw_shape(const mech* owner, client *client,
+		const sf::Vector2f& position) override;
 private:
-	std::string name;
-	sf::Keyboard::Key key = sf::Keyboard::Unknown;
-	mutable sf::Text name_text;
+	mutable sf::Text text;
 
 	float curr_delay = 0;
 	float delay;
-
-	bool power_status = true;
 };
 
-class legs : public item{
+class legs : public item, public turn_on{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
@@ -128,7 +153,6 @@ public:
 			* modes[(int)current_mode].rate;};
 
 	mech_status get_mech_changes_legs(float time) const noexcept;
-
 	item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position) override;
 private:
@@ -151,7 +175,7 @@ private:
 	inline void set_mode(mode_name mode) noexcept {this->current_mode = mode;};
 };
 
-class engine : public item, public change_mech_status{
+class engine : public item, public change_mech_status, public turn_on{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
