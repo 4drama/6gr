@@ -12,6 +12,9 @@ std::map<std::string, sf::Sprite> engine::sprites{};
 sf::Texture turn_on::texture{};
 std::map<std::string, sf::Sprite> turn_on::sprites{};
 
+sf::Texture cooling_system::texture{};
+std::map<std::string, sf::Sprite> cooling_system::sprites{};
+
 namespace{
 
 void set_scale_f(float scale, std::map<std::string, sf::Sprite> &sprites){
@@ -265,7 +268,7 @@ void engine::load_sprites(){
 };
 
 engine::engine(std::string name, int threshold_ = 0)
-	: item(name), performance{60.0f, 60.0f, 1.0f},
+	: item(name), performance{60.0f, 60.0f, 0.3f},
 		threshold(threshold_),
 		threshold_text(std::string("threshold"), get_font(), 20),
 		threshold_value_text(std::to_string(threshold_), get_font(), 21){
@@ -275,7 +278,7 @@ engine::engine(std::string name, int threshold_ = 0)
 }
 
 mech_status engine::get_mech_changes(float time, const mech_status &status) const noexcept{
-	float fuel =  status.current_fuel;
+	float fuel = status.current_fuel;
 	float current_energy_rate = status.current_energy / status.energy_capacity;
 	float necessary_energy_rate = (float)this->threshold / 100.f;
 
@@ -387,6 +390,45 @@ mech_status legs::get_mech_changes_legs(float time) const noexcept{
 mech_status change_mech_status::get_mech_changes(
 	float time, const mech_status &status) const noexcept{
 	return mech_status::zero();
+}
+
+void cooling_system::load_sprites(){
+	cooling_system::texture.loadFromFile("./../data/cooling_system.png");
+
+	cooling_system::sprites["picture"] = sf::Sprite(cooling_system::texture,
+		sf::IntRect(0, 0, 35, 35));
+	cooling_system::sprites["picture"].setPosition(17, 0);
+}
+
+cooling_system::cooling_system(
+	std::string name_, float heat_efficiency_, float energy_consumption_)
+	: item(name_), heat_efficiency(heat_efficiency_),
+	energy_consumption(energy_consumption_){
+	if(cooling_system::sprites.empty())
+		cooling_system::load_sprites();
+}
+
+mech_status cooling_system::get_mech_changes(
+	float time, const mech_status &status) const noexcept{
+
+	return (this->get_power_status()) && (status.current_heat > 40) ?
+		mech_status::current(-energy_consumption * time, -heat_efficiency * time) :
+		mech_status::zero();
+}
+
+item_shape cooling_system::get_draw_shape(const mech* owner, client *client,
+	const sf::Vector2f& position){
+
+		float scale = client->get_view_scale();
+		set_scale_f(scale, cooling_system::sprites);
+
+		item_shape shape{};
+		shape.elements.emplace_back(cooling_system::sprites["picture"],std::function<void()>());
+
+		place_shape_f(shape, scale, position);
+		shape += turn_on::get_draw_shape(owner, client, position);
+		return shape;
+
 }
 
 accumulator::accumulator(std::string name, float capacity_)

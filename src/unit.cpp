@@ -71,6 +71,8 @@ mech::mech(uint32_t cell_index_)
 	this->torso.items.emplace_back(std::make_shared<tank>("Tank", 20));
 	this->torso.items.emplace_back(std::make_shared<radiator>("Radiator", 200));
 	this->torso.items.emplace_back(std::make_shared<accumulator>("Accumulator", 100));
+	this->torso.items.emplace_back(
+		std::make_shared<cooling_system>("Cooling system", 10.0f, 1.25f));
 	this->refresh();
 
 	this->calculate_status(mech_status::current(0, 0, 20));
@@ -225,9 +227,9 @@ item_shape mech::prepare_shape(client *client) const{
 			}
 		}
 	};
-	get_zone_shape(this->torso.items, sf::Vector2f{-100, -200});
-	get_zone_shape(this->left_arm.items, sf::Vector2f{-400, -200});
-	get_zone_shape(this->right_arm.items, sf::Vector2f{200, -200});
+	get_zone_shape(this->torso.items, sf::Vector2f{-100, -400});
+	get_zone_shape(this->left_arm.items, sf::Vector2f{-400, -400});
+	get_zone_shape(this->right_arm.items, sf::Vector2f{200, -400});
 
 	return item_shape;
 }

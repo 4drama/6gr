@@ -220,6 +220,21 @@ private:
 	mutable sf::Text threshold_value_text;
 };
 
+class cooling_system : public item, public change_mech_status, public turn_on {
+	static sf::Texture texture;
+	static std::map<std::string, sf::Sprite> sprites;
+
+	static void load_sprites();
+public:
+	cooling_system(std::string name, float heat_efficiency, float energy_consumption);
+	mech_status get_mech_changes(float time, const mech_status &status) const noexcept override;
+	item_shape get_draw_shape(const mech* owner, client *client,
+		const sf::Vector2f& position) override;
+private:
+	float heat_efficiency = 0;
+	float energy_consumption = 0;
+};
+
 class accumulator : public item, public capacity_change{
 public:
 	accumulator(std::string name, float capacity_);
