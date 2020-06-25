@@ -83,7 +83,7 @@ item_shape turn_on::get_draw_shape(const mech* owner, client *client,
 }
 
 weapon::weapon(std::string name, float delay_)
-	: item(name), delay(delay_), text(name, get_font(), 22){
+	: item(name, 10, 3), delay(delay_), text(name, get_font(), 22){
 	if(weapon::sprites.empty())
 		weapon::load_sprites();
 	this->text.setPosition(39, 5);
@@ -144,8 +144,8 @@ void weapon::load_sprites(){
 	sprites["progress_bar_reload_ready"].setPosition(22, -27);
 }
 
-item::item(std::string name_)
-	: name(name_){
+item::item(std::string name_, float weight_, uint32_t slots_)
+	: name(name_), weight(weight_), slots(slots_){
 }
 
 item_shape weapon::get_draw_shape(const mech* owner, client *client,
@@ -268,7 +268,7 @@ void engine::load_sprites(){
 };
 
 engine::engine(std::string name, int threshold_ = 0)
-	: item(name), performance{60.0f, 60.0f, 0.3f},
+	: item(name, 30, 5), performance{60.0f, 60.0f, 0.3f},
 		threshold(threshold_),
 		threshold_text(std::string("threshold"), get_font(), 20),
 		threshold_value_text(std::to_string(threshold_), get_font(), 21){
@@ -333,7 +333,7 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 }
 
 legs::legs(std::string name)
-	: item(name), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
+	: item(name, 20, 5), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
 
 	if(legs::sprites.empty())
 		legs::load_sprites();
@@ -402,7 +402,7 @@ void cooling_system::load_sprites(){
 
 cooling_system::cooling_system(
 	std::string name_, float heat_efficiency_, float energy_consumption_)
-	: item(name_), heat_efficiency(heat_efficiency_),
+	: item(name_, 5, 2), heat_efficiency(heat_efficiency_),
 	energy_consumption(energy_consumption_){
 	if(cooling_system::sprites.empty())
 		cooling_system::load_sprites();
@@ -432,7 +432,7 @@ item_shape cooling_system::get_draw_shape(const mech* owner, client *client,
 }
 
 accumulator::accumulator(std::string name, float capacity_)
-	: item(name), capacity(capacity_){
+	: item(name, 5, 2), capacity(capacity_){
 };
 
 mech_status accumulator::get() const noexcept{
@@ -440,7 +440,7 @@ mech_status accumulator::get() const noexcept{
 }
 
 radiator::radiator(std::string name, float capacity_)
-	: item(name), capacity(capacity_){
+	: item(name, 5, 2), capacity(capacity_){
 };
 
 mech_status radiator::get() const noexcept{
@@ -448,7 +448,7 @@ mech_status radiator::get() const noexcept{
 }
 
 tank::tank(std::string name, float capacity_)
-	: item(name), capacity(capacity_){
+	: item(name, 5, 2), capacity(capacity_){
 };
 
 mech_status tank::get() const noexcept{

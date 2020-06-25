@@ -43,9 +43,9 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 
 mech::mech(uint32_t cell_index_)
 	: unit(cell_index_, 4),
-	left_arm{60, mech_status::zero(), std::list<std::shared_ptr<item>>{}, 2.0f},
-	torso{60, mech_status::zero(), std::list<std::shared_ptr<item>>{}, 1.0f},
-	right_arm{60, mech_status::zero(), std::list<std::shared_ptr<item>>{}, 2.0f},
+	left_arm(60, 25, 7, 2.0f),
+	torso(120, 80, 18, 1.0f),
+	right_arm(60, 25, 7, 2.0f),
 	energy_text("energy_value", get_font(), 22),
 	heat_text("heat_value", get_font(), 22),
 	fuel_text("fuel_text", get_font(), 22){
@@ -58,23 +58,22 @@ mech::mech(uint32_t cell_index_)
 		create_sprite_f(&unit::textures[filename],
 		60, 60, 0, 0));
 
-	this->left_arm.items.emplace_back(std::make_shared<weapon>("Rocket", 15000));
-	this->left_arm.items.emplace_back(std::make_shared<radiator>("Radiator", 75));
-	this->left_arm.items.emplace_back(std::make_shared<accumulator>("Accumulator", 50));
+	this->left_arm.add_item(std::make_shared<weapon>("Rocket", 15000));
+	this->left_arm.add_item(std::make_shared<radiator>("Radiator", 75));
+	this->left_arm.add_item(std::make_shared<accumulator>("Accumulator", 50));
 
-	this->right_arm.items.emplace_back(std::make_shared<weapon>("Rocket", 15000));
-	this->right_arm.items.emplace_back(std::make_shared<radiator>("Radiator", 75));
-	this->right_arm.items.emplace_back(std::make_shared<accumulator>("Accumulator", 50));
+	this->right_arm.add_item(std::make_shared<weapon>("Rocket", 15000));
+	this->right_arm.add_item(std::make_shared<radiator>("Radiator", 75));
+	this->right_arm.add_item(std::make_shared<accumulator>("Accumulator", 50));
 
-	this->torso.items.emplace_back(std::make_shared<legs>("Legs"));
-	this->torso.items.emplace_back(std::make_shared<engine>("Engine", 70));
-	this->torso.items.emplace_back(std::make_shared<tank>("Tank", 20));
-	this->torso.items.emplace_back(std::make_shared<radiator>("Radiator", 200));
-	this->torso.items.emplace_back(std::make_shared<accumulator>("Accumulator", 100));
-	this->torso.items.emplace_back(
-		std::make_shared<cooling_system>("Cooling system", 10.0f, 1.25f));
+	this->torso.add_item(std::make_shared<legs>("Legs"));
+	this->torso.add_item(std::make_shared<engine>("Engine", 70));
+	this->torso.add_item(std::make_shared<tank>("Tank", 20));
+	this->torso.add_item(std::make_shared<radiator>("Radiator", 200));
+	this->torso.add_item(std::make_shared<accumulator>("Accumulator", 100));
+	this->torso.add_item(std::make_shared<cooling_system>("Cooling system", 10.0f, 1.25f));
+
 	this->refresh();
-
 	this->calculate_status(mech_status::current(0, 0, 20));
 }
 
@@ -82,24 +81,51 @@ float mech::get_speed(terrain_en ter_type) const noexcept{
 	return legs_ptr ? legs_ptr->get_speed(ter_type) : 0;
 };
 
+part_of_mech::part_of_mech(float durability_,
+	float weight_, uint32_t slots_, float priority_)
+	: durability(durability_), status(mech_status::zero()),
+	priority(priority_), limits{weight_, slots_}{
+}
+
+void part_of_mech::prepare_for_refresh() noexcept{
+	this->status.clear_capacity();
+
+	this->weight = 0;
+	this->slots = 0;
+}
+
+bool part_of_mech::add_item(std::shared_ptr<item> item){
+	if(((this->weight + item->get_weight()) <= this->limits.weight) &&
+		((this->slots + item->get_slots()) <= this->limits.slots)){
+
+		this->items.emplace_back(item);
+		this->weight += item->get_weight();
+		this->slots += item->get_slots();
+		return true;
+	} else {
+		std::cerr << "Can't add item: " << item->get_name() << ". "
+			<< "Weight: " << this->weight << '+' << item->get_weight() << '/'
+			<< this->limits.weight << ". Slots: " << this->slots << '+' << item->get_slots()
+			<< '/' << this->limits.slots << std::endl;
+		return false;
+	}
+};
+
 void mech::refresh(){
 	this->legs_ptr = nullptr;
 	this->engine_ptr = nullptr;
-	auto clear_capacity = [](mech_status &status){
-		status.energy_capacity = 0;
-		status.heat_capacity = 0;
-		status.fuel_capacity = 0;
-	};
 
-	clear_capacity(left_arm.status);
-	clear_capacity(right_arm.status);
-	clear_capacity(torso.status);
+	left_arm.prepare_for_refresh();
+	right_arm.prepare_for_refresh();
+	torso.prepare_for_refresh();
 
 	for(auto& item : this->left_arm.items){
 		if(item->is_capacity_change()){
 			capacity_change* item_ptr = item->is_capacity_change();
 			this->left_arm.status += item_ptr->get();
 		}
+		this->left_arm.weight += item->get_weight();
+		this->left_arm.slots += item->get_slots();
 	}
 
 	for(auto& item : this->right_arm.items){
@@ -107,6 +133,8 @@ void mech::refresh(){
 			capacity_change* item_ptr = item->is_capacity_change();
 			this->right_arm.status += item_ptr->get();
 		}
+		this->right_arm.weight += item->get_weight();
+		this->right_arm.slots += item->get_slots();
 	}
 
 	for(auto& item : this->torso.items){
@@ -120,6 +148,8 @@ void mech::refresh(){
 			capacity_change* item_ptr = item->is_capacity_change();
 			this->torso.status += item_ptr->get();
 		}
+		this->torso.weight += item->get_weight();
+		this->torso.slots += item->get_slots();
 	}
 }
 

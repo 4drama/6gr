@@ -118,12 +118,18 @@ public:
 
 class item : public virtual item_base, std::enable_shared_from_this<item>{
 public:
-	item(std::string name);
+	item(std::string name, float weight, uint32_t slots);
 
 	inline const std::string& get_name() const noexcept{ return this->name;};
 	inline virtual void update(mech* owner, float time){};
+
+	inline float get_weight() const noexcept {return this->weight;};
+	inline uint32_t get_slots() const noexcept {return this->slots;};
 private:
 	std::string name;
+
+	float weight = 0;
+	uint32_t slots = 0;
 };
 
 class weapon : public item{

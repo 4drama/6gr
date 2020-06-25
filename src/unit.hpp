@@ -55,14 +55,14 @@ struct mech_status {
 		size = 3
 	};
 
-	float current_energy = 75;
-	float energy_capacity = 100;
+	float current_energy = 0;
+	float energy_capacity = 0;
 
-	float current_heat = 50;
-	float heat_capacity = 300;
+	float current_heat = 0;
+	float heat_capacity = 0;
 
-	float current_fuel = 30;
-	float fuel_capacity = 100;
+	float current_fuel = 0;
+	float fuel_capacity = 0;
 
 	inline std::list<std::pair<mech_status::type, float>> get() const;
 
@@ -96,17 +96,30 @@ struct mech_status {
 	friend inline mech_status& operator/=(mech_status& left, uint32_t value);
 
 	inline operator bool() const;
+	inline void clear_capacity() noexcept;
 };
 
 bool is_store(const std::pair<mech_status::type, float> &val);
 inline bool is_spend(const std::pair<mech_status::type, float> &val){ return !is_store(val);}
 
 struct part_of_mech{
+	part_of_mech(float durability, float weight, uint32_t slots, float priority);
+	void prepare_for_refresh() noexcept;
+	bool add_item(std::shared_ptr<item> item);
+
 	float durability = 10;
 	mech_status status;
 	std::list<std::shared_ptr<item>> items;
 
 	float priority = 1.0f;
+
+	float weight = 0;
+	uint32_t slots = 0;
+
+	struct{
+		float weight;
+		uint32_t slots;
+	} limits;
 };
 
 class mech : public unit{
@@ -217,6 +230,12 @@ inline bool operator!=(const mech_status& left, const mech_status& right){
 
 inline mech_status::operator bool() const{
 	return *this != mech_status::zero();
+}
+
+inline void mech_status::clear_capacity() noexcept{
+	this->energy_capacity = 0;
+	this->heat_capacity = 0;
+	this->fuel_capacity = 0;
 }
 
 #endif
