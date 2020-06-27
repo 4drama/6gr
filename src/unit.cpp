@@ -8,16 +8,6 @@ item_button::item_button(sf::Sprite sprite_, std::function<void()> func_)
 	: sprite(sprite_), func(func_) {
 };
 
-bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos){
-	sf::FloatRect rect = sprite.getGlobalBounds();
-
-	if((rect.left <= pos.x) && ((rect.left + rect.width) >= pos.x) &&
-		(rect.top <= pos.y) && ((rect.top + rect.height) >= pos.y))
-		return true;
-	else
-		return false;
-}
-
 namespace{
 
 sf::Sprite create_sprite_f(sf::Texture *texture,
@@ -276,7 +266,7 @@ bool mech::interact_gui(game_info *info, client *client){
 	sf::Vector2f pos = client->mouse_on_map();
 	item_shape shape = prepare_shape(client);
 	for(auto &but : shape.elements){
-		if(is_inside_sprite(but.sprite, pos)){
+		if(is_inside(but.sprite, pos)){
 			if(but.func){
 				but.func();
 			}

@@ -17,8 +17,6 @@ class item;
 class legs;
 class engine;
 
-bool is_inside_sprite(sf::Sprite sprite, sf::Vector2f pos);
-
 struct unit : std::enable_shared_from_this<unit>{
 	static std::map<std::string, sf::Texture> textures;
 

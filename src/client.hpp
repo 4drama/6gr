@@ -8,10 +8,14 @@ class client;
 
 #include "map.hpp"
 #include "gui.hpp"
+#include "window.hpp"
 
 #include <list>
 #include <functional>
 #include <memory>
+
+template<typename bounds_type>
+bool is_inside(bounds_type bounds, sf::Vector2f pos);
 
 class item_shape;
 
@@ -74,8 +78,22 @@ private:
 	std::shared_ptr<player_info> player;
 
 	std::vector<button> buttons_gui;
+
+	std::list<game_window> game_windows;
+	bool windows_interact(sf::Event event);
 };
 
 sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept;
+
+template<typename bounds_type>
+bool is_inside(bounds_type bounds, sf::Vector2f pos){
+	sf::FloatRect rect = bounds.getGlobalBounds();
+
+	if((rect.left <= pos.x) && ((rect.left + rect.width) >= pos.x) &&
+		(rect.top <= pos.y) && ((rect.top + rect.height) >= pos.y))
+		return true;
+	else
+		return false;
+}
 
 #endif

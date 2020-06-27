@@ -247,24 +247,12 @@ void gui::draw(game_info *info, client *client){
 	labels_draw(info, client);
 }
 
-namespace{
-	bool is_inside_f(button const& but, sf::Vector2f pos){
-		sf::FloatRect rect = but.sprites[but.state].getGlobalBounds();
-
-		if((rect.left <= pos.x) && ((rect.left + rect.width) >= pos.x) &&
-			(rect.top <= pos.y) && ((rect.top + rect.height) >= pos.y))
-			return true;
-		else
-			return false;
-	}
-}
-
 bool gui::gui_interact(game_info *info, client *client){
 	sf::Vector2f pos = client->mouse_on_map();
 
 	auto buttons_gui = client->get_buttons_gui();
 	for(auto &but : buttons_gui){
-		if(is_inside_f(but, pos)){
+		if(is_inside(but.sprites[but.state], pos)){
 			but.inter(*info, *client, &but);
 			return true;
 		}

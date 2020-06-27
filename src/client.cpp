@@ -20,6 +20,9 @@ client::client(game_info *info, int width_, int height_, uint32_t player_index)
 	display_rate = view_size.x / view_size.y;
 
 	player_respawn(info, this);
+
+	game_windows.emplace_back(sf::Vector2f(50, 50), sf::Vector2f(100, 100), sf::Color(255, 0, 0));
+	game_windows.emplace_back(sf::Vector2f(100, 100), sf::Vector2f(100, 100), sf::Color(0, 255, 255));
 }
 
 float client::get_view_scale() const{
@@ -162,6 +165,10 @@ void client::control_update(game_info *info, float time){
 			this->change_show_grid();
 		}
 
+		if(this->windows_interact(event)){
+			return;
+		}
+
 		static float left_click_cd = 0;
 		left_click_cd -= time;
 		if (event.type == sf::Event::MouseButtonPressed &&
@@ -261,6 +268,10 @@ void client::draw(game_info *info, float time){
 		if((selected_units.size() == 1) && (selected_units.front().first == player_id)){
 			auto unit_ptr = selected_units.front().second.lock();
 			unit_ptr->draw_gui(info, this);
+		}
+
+		for(auto &win : this->game_windows){
+			win.draw(&window, this->get_view_scale());
 		}
 
 		this->window.display();
@@ -398,3 +409,16 @@ sf::Vector2f client::mouse_on_map() const {
 sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept {
 	return cell_ptr->pos + client_ptr->get_map_offset();
 };
+
+bool client::windows_interact(sf::Event event){
+	for(auto it = this->game_windows.rbegin(); it != this->game_windows.rend(); ++it){
+		if(it->interact(this->mouse_on_map(), event)){
+			if(!it->is_close()){
+				this->game_windows.push_back(*it);
+			}
+			this->game_windows.erase(--it.base());
+			return true;
+		}
+	}
+	return false;
+}
