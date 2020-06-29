@@ -21,8 +21,8 @@ client::client(game_info *info, int width_, int height_, uint32_t player_index)
 
 	player_respawn(info, this);
 
-	game_windows.emplace_back(sf::Vector2f(50, 50), sf::Vector2f(100, 100), sf::Color(255, 0, 0));
-	game_windows.emplace_back(sf::Vector2f(100, 100), sf::Vector2f(100, 100), sf::Color(0, 255, 255));
+	game_windows.emplace_back(sf::Vector2f(50, 50), sf::Vector2f(100, 100));
+	game_windows.emplace_back(sf::Vector2f(100, 100), sf::Vector2f(100, 100));
 }
 
 float client::get_view_scale() const{
