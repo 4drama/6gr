@@ -18,8 +18,20 @@ public:
 	virtual void draw(sf::RenderWindow *window) = 0;
 
 protected:
-	std::map<std::string, sf::Sprite> *sprites;
+	std::map<std::string, sf::Sprite> *sprites_ptr;
 	sf::Vector2f position;
+};
+
+class exit_button : public widget{
+public:
+	exit_button(std::map<std::string, sf::Sprite> *sprites);
+
+	void update(game_window *win) noexcept override;
+	bool interact(game_window *win, sf::Vector2f position, sf::Event event) override;
+	void draw(sf::RenderWindow *window) override;
+private:
+	sf::Sprite sprite;
+//	std::function<void()> left_click;
 };
 
 class header_bar : public widget{
@@ -35,10 +47,14 @@ private:
 	sf::Vector2f size;
 
 	sf::RectangleShape main_zone;
-	std::function<void()> drag_and_drop;
+//	std::function<void()> drag_and_drop;
 
 	bool is_move = false;
 	sf::Vector2f old_move_position;
+
+	std::vector<sf::Sprite> tmp_sprites;
+
+	exit_button exit_button_m;
 };
 
 class window : public widget{
@@ -54,6 +70,7 @@ private:
 	sf::Vector2f size;
 
 	sf::RectangleShape main_zone;
+	std::vector<sf::Sprite> tmp_sprites;
 };
 
 class game_window{
@@ -73,6 +90,7 @@ public:
 	inline const float& get_scale() const noexcept{return this->scale;};
 
 	inline bool is_close() const noexcept {return this->is_close_m;};
+	inline void close() noexcept{this->is_close_m = true;};
 private:
 	sf::Vector2f position;
 	sf::Vector2f size;
