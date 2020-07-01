@@ -1,5 +1,6 @@
 #include "unit.hpp"
 
+#include <cmath>
 #include <iostream>
 
 std::map<std::string, sf::Texture> unit::textures{};
@@ -73,8 +74,9 @@ float mech::get_speed(terrain_en ter_type) const noexcept{
 
 part_of_mech::part_of_mech(float durability_,
 	float weight_, uint32_t slots_, float priority_)
-	: durability(durability_), status(mech_status::zero()),
-	priority(priority_), limits{weight_, slots_}{
+	: durability(durability_), max_durability(durability_),
+	status(mech_status::zero()), priority(priority_), limits{weight_, slots_},
+	durability_text("durability_value", get_font(), 22){
 }
 
 void part_of_mech::prepare_for_refresh() noexcept{
@@ -100,6 +102,13 @@ bool part_of_mech::add_item(std::shared_ptr<item> item){
 		return false;
 	}
 };
+
+void part_of_mech::validate(){
+	if(this->durability <= 0){
+		this->status.current_energy = 0;
+		this->status.current_fuel = 0;
+	}
+}
 
 void mech::refresh(){
 	this->legs_ptr = nullptr;
@@ -214,6 +223,47 @@ item_shape mech::get_status_shape(client *client, const sf::Vector2f& position) 
 	 		 &this->fuel_text, sf::Color(55, 49, 29));
 	};
 
+	auto add_capacity_rectangle = [&scale, &shape](sf::Vector2f size,
+		sf::Vector2f offset, sf::Vector2f pos, sf::Color color = sf::Color::White){
+
+		sf::RectangleShape rect(size * scale);
+		rect.setPosition((offset + pos) * scale);
+		rect.setFillColor(color);
+		shape.bar_elements.emplace_back(rect);
+	};
+
+	auto add_capacity_text = [&scale, &shape](sf::Text *text, sf::Vector2f offset,
+		sf::Vector2f pos, std::string str, sf::Color color = sf::Color::White){
+
+		text->setScale(scale, -scale);
+		text->setPosition((offset + pos) * scale);
+		text->setColor(color);
+		text->setString(str);
+		text->setOutlineThickness(1.0f);
+		text->setOutlineColor(sf::Color(50, 50, 200));
+		shape.text_elements.emplace_back(text);
+	};
+
+	auto add_capacity_bar = [&scale, &shape,
+		&add_capacity_rectangle, &add_capacity_text](
+		sf::Vector2f offset, const part_of_mech& part){
+
+		float rate = part.durability / part.max_durability;
+
+		add_capacity_rectangle(sf::Vector2f(227, 35), offset, sf::Vector2f(0, 0),
+			part.durability > 0 ? sf::Color(80, 100, 125) : sf::Color(10, 30, 55));
+		add_capacity_rectangle(sf::Vector2f(227 * rate, 35), offset, sf::Vector2f(0, 0),
+			sf::Color( (160 * (1 - rate)) + (std::sin(rate * 3.14) * 120),
+			(160 * rate) + (std::sin(rate * 3.14) * 120), 60));
+		add_capacity_text(&part.durability_text, offset, sf::Vector2f(5, 33),
+			std::to_string((int)part.durability) +
+			"/" + std::to_string((int)part.max_durability));
+	};
+
+	add_capacity_bar(sf::Vector2f{-113, -435}, this->torso);
+	add_capacity_bar(sf::Vector2f{-413, -435}, this->left_arm);
+	add_capacity_bar(sf::Vector2f{187, -435}, this->right_arm);
+
 	auto zone_debug = [&add_rectangle](sf::Vector2f offset, const mech_status &stat){
 		add_rectangle(sf::Vector2f(20, stat.current_energy / 3),
 			offset, sf::Vector2f(0, 0),
@@ -247,9 +297,9 @@ item_shape mech::prepare_shape(client *client) const{
 			}
 		}
 	};
-	get_zone_shape(this->torso.items, sf::Vector2f{-100, -400});
-	get_zone_shape(this->left_arm.items, sf::Vector2f{-400, -400});
-	get_zone_shape(this->right_arm.items, sf::Vector2f{200, -400});
+	get_zone_shape(this->torso.items, sf::Vector2f{-100, -360});
+	get_zone_shape(this->left_arm.items, sf::Vector2f{-400, -360});
+	get_zone_shape(this->right_arm.items, sf::Vector2f{200, -360});
 
 	return item_shape;
 }
@@ -279,7 +329,7 @@ bool mech::interact_gui(game_info *info, client *client){
 mech_status mech::accumulate_status() const noexcept{
 	mech_status status = mech_status::zero();
 	auto add_part = [&status](const part_of_mech &part){
-		if(part.durability != 0)
+		if(part.durability > 0)
 			status += part.status;
 	};
 
@@ -440,8 +490,9 @@ void unit::update(game_info *info, uint32_t player_index, float time){
 }
 
 void mech::update_v(game_info *info, uint32_t player_index, float time){
-	auto item_update = [this, &time](auto &zone){
-		for(auto &item : zone){
+	auto update = [this, &time](auto &zone){
+		zone.validate();
+		for(auto &item : zone.items){
 			if(item->is_change_mech_status()){
 				auto change_item = item->is_change_mech_status();
 				mech_status diff = change_item->get_mech_changes(time / 10000,
@@ -453,9 +504,9 @@ void mech::update_v(game_info *info, uint32_t player_index, float time){
 			item->update(this, time);
 		}
 	};
-	item_update(this->torso.items);
-	item_update(this->left_arm.items);
-	item_update(this->right_arm.items);
+	update(this->torso);
+	update(this->left_arm);
+	update(this->right_arm);
 }
 
 std::pair<mech_status::type, float>

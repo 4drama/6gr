@@ -104,8 +104,12 @@ struct part_of_mech{
 	part_of_mech(float durability, float weight, uint32_t slots, float priority);
 	void prepare_for_refresh() noexcept;
 	bool add_item(std::shared_ptr<item> item);
+	void validate();
 
-	float durability = 10;
+	float durability = 30;
+	float max_durability = 30;
+	mutable sf::Text durability_text;
+
 	mech_status status;
 	std::list<std::shared_ptr<item>> items;
 
