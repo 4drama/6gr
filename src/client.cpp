@@ -169,6 +169,27 @@ void client::control_update(game_info *info, float time){
 			return;
 		}
 
+		if(info->players[this->player->get_index()].selected_units.size() != 0){
+			auto *selected_units = &info->players[this->player->get_index()].selected_units;
+			uint32_t finish_cell = get_cell_index_under_mouse(info, this);
+			if(finish_cell != UINT32_MAX){
+				uint32_t count = 0;
+				for(auto &curr_unit : *selected_units){
+					if((curr_unit.first == this->player->get_index())
+						&& (curr_unit.second.use_count() != 0)){
+
+						std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
+						if(unit_ptr->event(event, info, this->player->get_index(),
+							finish_cell)){
+							++count;
+						}
+					}
+				}
+				if(count > 0)
+					return;
+			}
+		}
+
 		static float left_click_cd = 0;
 		left_click_cd -= time;
 		if (event.type == sf::Event::MouseButtonPressed &&
@@ -178,35 +199,10 @@ void client::control_update(game_info *info, float time){
 					if(!select_item(info, this->player->get_index(), this)){
 						select_cell(info, this->player->get_index(), this);
 						select_units(info, this->player->get_index());
-					}
+					} else
+						return;
 				}
 				left_click_cd = 30;
-			}
-		}
-
-		if (event.type == sf::Event::MouseButtonPressed &&
-			event.mouseButton.button == sf::Mouse::Button::Right){
-
-			if(info->players[this->player->get_index()].selected_units.size() != 0){
-				auto *selected_units = &info->players[this->player->get_index()].selected_units;
-				uint32_t finish_cell = get_cell_index_under_mouse(info, this);
-				if(finish_cell != UINT32_MAX){
-					for(auto &curr_unit : *selected_units){
-						if((curr_unit.first == this->player->get_index())
-							&& (curr_unit.second.use_count() != 0)){
-
-							std::shared_ptr<unit> unit_ptr = curr_unit.second.lock();
-
-							auto old_front_cell = unit_ptr->path.front();
-
-							unit_ptr->path = path_find(info, unit_ptr->cell_index,
-								finish_cell, unit_ptr, this->player->get_index(), true);
-
-							if(old_front_cell != unit_ptr->path.front())
-								unit_ptr->path_progress = 0;
-						}
-					}
-				}
 			}
 		}
 
@@ -321,6 +317,24 @@ void client::draw_way(sf::Vertex *line, sf::CircleShape *circle, cell *cell) con
 	}
 }
 
+void client::fill_color_cell(game_info *info, uint32_t cell_index,
+	sf::Color outline_color, sf::Color fill_color) const{
+	if(cell_index == UINT32_MAX)
+		return;
+	sf::Vertex transform_shape[7];
+	create_transform_shape(this,
+		draw_position(&info->map[cell_index], this),
+		transform_shape, outline_color);
+
+	sf::ConvexShape shape(7);
+	for(std::size_t i = 0; i < 7; ++i){
+		shape.setPoint(i, transform_shape[i].position);
+	}
+	shape.setFillColor(fill_color);
+	this->window.draw(shape);
+	this->draw_cell_border(transform_shape);
+}
+
 void client::draw_selected_cell(game_info *info) const{
 	for(auto &player_index : this->player->control_players){
 		auto &curr_player = info->players[player_index];
@@ -329,12 +343,7 @@ void client::draw_selected_cell(game_info *info) const{
 			auto unit_ptr = unit.second.lock();
 			if(this->on_screen(&info->map[unit_ptr->cell_index])){
 
-				sf::Vertex transform_shape[7];
-				create_transform_shape(this,
-					draw_position(&info->map[unit_ptr->cell_index], this),
-					transform_shape, sf::Color(88, 244, 122));
-
-				this->draw_cell_border(transform_shape);
+				this->fill_color_cell(info, unit_ptr->cell_index, sf::Color(88, 244, 122));
 			}
 		}
 	}

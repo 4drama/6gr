@@ -5,6 +5,28 @@
 
 std::map<std::string, sf::Texture> unit::textures{};
 
+void unit::update_path(game_info *info, uint32_t player_index, uint32_t target_cell){
+	auto old_front_cell = this->path.front();
+
+	this->path = path_find(info, this->cell_index,
+		target_cell, shared_from_this(), player_index, true);
+
+	if(old_front_cell != this->path.front())
+		this->path_progress = 0;
+}
+
+bool unit::event(sf::Event event, game_info *info, uint32_t player_index,
+	uint32_t target_cell) noexcept{
+
+	if(event.type == sf::Event::MouseButtonPressed &&
+		event.mouseButton.button == sf::Mouse::Button::Right){
+
+		this->update_path(info, player_index, target_cell);
+		return true;
+	}
+	return false;
+}
+
 item_button::item_button(sf::Sprite sprite_, std::function<void()> func_)
 	: sprite(sprite_), func(func_) {
 };
@@ -309,6 +331,11 @@ void mech::draw_gui(game_info *info, client *client){
 	auto status_shape = this->get_status_shape(client, sf::Vector2f{0, 0});
 	client->draw_item_shape(item_shape);
 	client->draw_item_shape(status_shape);
+
+	if((waiting_confirm != nullptr) && waiting_confirm->is_path_draw()){
+		path_draw *item_draw_ptr = waiting_confirm->is_path_draw();
+		item_draw_ptr->draw_active_zone(this->cell_index, info, client);
+	}
 }
 
 bool mech::interact_gui(game_info *info, client *client){
@@ -321,6 +348,33 @@ bool mech::interact_gui(game_info *info, client *client){
 				but.func();
 			}
 			return true;
+		}
+	}
+	return false;
+}
+
+bool mech::event(sf::Event event, game_info *info, uint32_t player_index,
+	uint32_t target_cell) noexcept{
+
+	if(event.type == sf::Event::MouseButtonPressed){
+		switch(event.mouseButton.button){
+			case sf::Mouse::Button::Left :
+				if(this->waiting_confirm != nullptr){
+					std::cerr << "babah" << std::endl;
+					this->waiting_confirm = nullptr;
+					return true;
+				}
+				return false;
+			case sf::Mouse::Button::Right :
+				if(this->waiting_confirm == nullptr){
+					this->update_path(info, player_index, target_cell);
+					return true;
+				} else {
+					this->waiting_confirm = nullptr;
+					return true;
+				}
+			default :
+				return false;
 		}
 	}
 	return false;

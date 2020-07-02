@@ -158,7 +158,6 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 	if(this->get_power_status()){
 		shape.elements.emplace_back(weapon::sprites["active_hotkey_screen"], std::function<void()>());
 		shape.elements.emplace_back(weapon::sprites["active_delay_screen"], std::function<void()>());
-		shape.elements.emplace_back(weapon::sprites["active_button"], std::function<void()>());
 
 		if(this->get_ready(owner)){
 			for(uint32_t x = 0; x < 190; x += 38){
@@ -168,6 +167,8 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 			}
 			shape.text_elements.emplace_back(
 				update_text_f(scale, sf::Vector2f(39, 5), &this->text));
+			shape.elements.emplace_back(weapon::sprites["active_button"],
+				[owner, this](){const_cast<mech*>(owner)->set_waiting_item(this);});
 		} else {
 			shape.elements.emplace_back(weapon::sprites["inactive_button"], std::function<void()>());
 			float delay_rate = this->get_delay();
@@ -197,6 +198,14 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 
 	place_shape_f(shape, scale, position);
 	return shape;
+}
+
+void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, client *client){
+	client->fill_color_cell(info, get_cell_index_under_mouse(info, client),
+		sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
+
+	client->fill_color_cell(info, mech_cell_position,
+		sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
 }
 
 void legs::load_sprites(){

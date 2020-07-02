@@ -38,11 +38,17 @@ struct unit : std::enable_shared_from_this<unit>{
 	virtual void draw_gui(game_info *info, client *client){return ;};
 	virtual bool interact_gui(game_info *info, client *client){return false;};
 
+	virtual bool event(sf::Event event, game_info *info,
+		uint32_t player_index, uint32_t target_cell) noexcept;
+
 private:
 	void unit_update_move(game_info *info, uint32_t player_index, float time);
 	inline virtual void update_v(game_info *info, uint32_t player_index, float time){return ;};
 	virtual float move_calculate(float time, terrain_en ter_type) noexcept{
 		return this->get_speed(ter_type) * time;};
+
+protected:
+	void update_path(game_info *info, uint32_t player_index, uint32_t target_cell);
 };
 
 struct mech_status {
@@ -133,10 +139,15 @@ public:
 
 	float get_speed(terrain_en ter_type) const noexcept override;
 
-	void draw_gui(game_info *info, client *client);
-	bool interact_gui(game_info *info, client *client);
+	void draw_gui(game_info *info, client *client) override;
+	bool interact_gui(game_info *info, client *client) override;
+	bool event(sf::Event event, game_info *info,
+		uint32_t player_index, uint32_t target_cell) noexcept override;
 
 	float get_available_rate(mech_status necessary) const noexcept;
+
+	inline void set_waiting_item(item *item) noexcept{this->waiting_confirm = item;};
+	inline item *get_waiting_item() const noexcept{return waiting_confirm;};
 private:
 	item *waiting_confirm = nullptr;
 

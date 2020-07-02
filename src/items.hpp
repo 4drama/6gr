@@ -68,6 +68,7 @@ class change_mech_status;
 class turn_on;
 class weapon;
 class capacity_change;
+class path_draw;
 
 class item_base{
 public:
@@ -77,6 +78,7 @@ public:
 	inline virtual turn_on* is_turn_on() noexcept {return nullptr;};
 	inline virtual weapon* is_weapon() noexcept {return nullptr;};
 	inline virtual capacity_change* is_capacity_change() noexcept {return nullptr;};
+	inline virtual path_draw* is_path_draw() noexcept {return nullptr;};
 
 	inline virtual bool get_power_status() const noexcept{ return true;};
 
@@ -88,6 +90,13 @@ class capacity_change : public virtual item_base{
 public:
 	inline capacity_change* is_capacity_change() noexcept override {return this;};
 	virtual mech_status get() const noexcept = 0;
+};
+
+class path_draw : public virtual item_base{
+public:
+	inline path_draw* is_path_draw() noexcept override {return this;};
+	inline virtual void draw_active_zone(uint32_t mech_cell_position, game_info *info,
+		client *client){return ;};
 };
 
 class turn_on : public virtual item_base{
@@ -132,7 +141,7 @@ private:
 	uint32_t slots = 0;
 };
 
-class weapon : public item{
+class weapon : public item, public path_draw{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
@@ -149,6 +158,8 @@ public:
 
 	item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position) override;
+	void draw_active_zone(uint32_t mech_cell_position, game_info *info,
+		client *client) override;
 private:
 	mutable sf::Text text;
 

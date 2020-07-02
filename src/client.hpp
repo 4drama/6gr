@@ -47,6 +47,9 @@ public:
 
 	bool draw_cell(sf::Vertex *transform_shape, cell *cell,
 		std::function<sf::Color(terrain_en)> func) const;
+	void fill_color_cell(game_info *info, uint32_t cell_index, sf::Color outline_color,
+		sf::Color fill_color = sf::Color(255, 255, 255, 0)) const;
+
 	void draw_out_of_view(cell *cell) const;
 	void draw_objects(std::vector<sf::Sprite> *object_sprites) const;
 	void draw_way(sf::Vertex *line, sf::CircleShape *circle, cell *cell) const;
