@@ -8,10 +8,10 @@ SRC_DIR= ./src/
 OBJ_DIR= ./obj/
 BIN_DIR= ./bin/
 
-all: map client control gui main unit items window
+all: map client control gui main unit items window math
 	$(CC) $(LIBFLAGS) $(OBJ_DIR)main.o $(OBJ_DIR)map.o $(OBJ_DIR)control.o \
 	$(OBJ_DIR)gui.o $(OBJ_DIR)client.o $(OBJ_DIR)unit.o $(OBJ_DIR)window.o \
-	$(OBJ_DIR)items.o -o $(BIN_DIR)game.exe $(LDFLAGS)
+	$(OBJ_DIR)items.o $(OBJ_DIR)math.o -o $(BIN_DIR)game.exe $(LDFLAGS)
 
 unit:
 	$(CC) $(CFLAGS) $(SRC_DIR)unit.cpp -o $(OBJ_DIR)unit.o
@@ -33,6 +33,9 @@ gui:
 
 window:
 	$(CC) $(CFLAGS) $(SRC_DIR)window.cpp -o $(OBJ_DIR)window.o
+
+math:
+	$(CC) $(CFLAGS) $(SRC_DIR)math.cpp -o $(OBJ_DIR)math.o
 
 main:
 	$(CC) $(CFLAGS) $(SRC_DIR)main.cpp -o $(OBJ_DIR)main.o

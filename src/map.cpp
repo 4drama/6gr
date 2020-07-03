@@ -6,6 +6,9 @@
 #include <ctime>
 #include <functional>
 #include <stdexcept>
+#include <cassert>
+
+#include "math.hpp"
 
 const float pi = 3.14159265359;
 
@@ -30,6 +33,25 @@ cardinal_directions_t next(cardinal_directions_t dir){
 cardinal_directions_t previous(cardinal_directions_t dir){
 	using cd_t = cardinal_directions_t;
 	return dir != cd_t::BEGIN ? (cd_t)((int)dir - 1) : cd_t::LAST;
+}
+
+cardinal_directions_t get_direction(sf::Vector2f vec){
+	using cd_t = cardinal_directions_t;
+	sf::Vector2f dir = direction(vec);
+	if(in_range(sf::Vector2f(0.866025f, -0.5f), sf::Vector2f(1.0f, 0.5f), dir)){
+		return cd_t::EAST;
+	} else if(in_range(sf::Vector2f(0.0f, -1.0f), sf::Vector2f(0.866025f, -0.5f), dir)){
+		return cd_t::EAST_SOUTH;
+	} else if(in_range(sf::Vector2f(-0.866025f, -1.0f), sf::Vector2f(0.0f, -0.5f), dir)){
+		return cd_t::WEST_SOUTH;
+	} else if(in_range(sf::Vector2f(-1.0f, -0.5f), sf::Vector2f(-0.866025f, 0.5f), dir)){
+		return cd_t::WEST;
+	} else if(in_range(sf::Vector2f(-0.866025f, 0.5f), sf::Vector2f(0.0f, 1.0f), dir)){
+		return cd_t::WEST_NORTH;
+	} else if(in_range(sf::Vector2f(0.0f, 0.5f), sf::Vector2f(0.866025f, 1.0f), dir)){
+		return cd_t::EAST_NORTH;
+	} else
+		assert(false);
 }
 
 struct connection{
@@ -460,6 +482,9 @@ struct path_cell{
 float get_path_weight_f(std::vector<cell> &map, uint32_t target_cell_index,
 	std::shared_ptr<unit> unit, uint32_t player_index, std::vector<bool> *vision_map){
 	terrain_en ter_type = map[target_cell_index].ter.type;
+	if(!unit)
+		return 1;
+
 	if(map[target_cell_index].player_visible[player_index] == true){
 		if(unit->get_speed(ter_type) == 0){
 			return INFINITY;
@@ -503,7 +528,7 @@ void fill_queue_f(std::vector<cell> &map, std::vector<path_cell> &map_path,
 
 bool infinity_check(game_info *info, std::shared_ptr<unit> unit, uint32_t point){
 	terrain_en ter_type = info->get_cell(point).ter.type;
-	if(unit->get_speed(ter_type) == 0)
+	if((unit != nullptr) && (unit->get_speed(ter_type) == 0))
 		return true;
 	else
 		return false;
@@ -1009,6 +1034,18 @@ void draw_path(game_info *info, client* client, std::list<uint32_t> path,
 
 		line[0] = line[1];
 	}
+}
+
+uint32_t get_cell_under_position(game_info *info, client *client, sf::Vector2f position){
+	uint32_t res = UINT32_MAX;
+	for(uint32_t i = 0; i < info->map.size(); ++i){
+		sf::Vertex transform_shape[7];
+		if(is_inside_f(client, &info->map[i], position, transform_shape)){
+			res = i;
+			break;
+		}
+	}
+	return res;
 }
 
 uint32_t get_cell_index_under_mouse(game_info *info, client *client){

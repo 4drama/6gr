@@ -4,6 +4,9 @@
 #include "gui.hpp"
 #include "unit.hpp"
 
+#include <iostream>
+#include <cmath>
+
 client::client(game_info *info, int width_, int height_, uint32_t player_index)
 	: Width(width_), Height(height_), draw_cells(false), zoom_manager(0),
 	window(sf::VideoMode(Width, Height), "game client"),

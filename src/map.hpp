@@ -90,6 +90,8 @@ cardinal_directions_t against(cardinal_directions_t dir);
 cardinal_directions_t next(cardinal_directions_t dir);
 cardinal_directions_t previous(cardinal_directions_t dir);
 
+cardinal_directions_t get_direction(sf::Vector2f vec);
+
 class cell{
 public:
 	static sf::Vector2f offset[(int)cardinal_directions_t::END];
@@ -183,6 +185,7 @@ std::list<uint32_t> path_find(game_info *info, uint32_t start_point,
 	uint32_t finish_point, std::shared_ptr<unit> unit, uint32_t player_index,
 	bool random_dir);
 
+uint32_t get_cell_under_position(game_info *info, client *client, sf::Vector2f position);
 uint32_t get_cell_index_under_mouse(game_info *info, client *client);
 void draw_path(game_info *info, client* client, std::list<uint32_t> path,
 	float progress);

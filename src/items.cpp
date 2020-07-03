@@ -1,5 +1,8 @@
 #include "items.hpp"
 
+#include <cmath>
+#include <iostream>
+
 sf::Texture weapon::texture{};
 std::map<std::string, sf::Sprite> weapon::sprites{};
 
@@ -201,11 +204,27 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 }
 
 void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, client *client){
-	client->fill_color_cell(info, get_cell_index_under_mouse(info, client),
-		sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
+	using cd_t = cardinal_directions_t;
 
-	client->fill_color_cell(info, mech_cell_position,
-		sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
+	uint32_t target = get_cell_index_under_mouse(info, client);
+	if(target == UINT32_MAX)
+		return ;
+
+	cell *current_cell = &info->get_cell(mech_cell_position);
+	const cell *target_cell = &info->get_cell(target);
+	const sf::Vector2f &to_point = target_cell->pos;
+
+	while(current_cell != target_cell){
+		sf::Vector2f from_point = current_cell->pos;
+		sf::Vector2f diff = to_point - from_point;
+
+		cd_t dir = get_direction(diff);
+
+		client->fill_color_cell(info, current_cell->indeces[(int)dir],
+			sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
+
+		current_cell = &info->get_cell(current_cell->indeces[(int)dir]);
+	}
 }
 
 void legs::load_sprites(){

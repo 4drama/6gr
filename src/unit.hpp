@@ -51,6 +51,13 @@ protected:
 	void update_path(game_info *info, uint32_t player_index, uint32_t target_cell);
 };
 
+class rocket : public unit{
+public:
+	rocket(uint32_t cell_index) : unit(cell_index, 0){};
+
+	inline float get_speed(terrain_en ter_type) const noexcept override {return 1;};
+};
+
 struct mech_status {
 	enum class type{
 		energy = 0,
