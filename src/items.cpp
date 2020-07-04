@@ -1,7 +1,11 @@
 #include "items.hpp"
 
+#include "math.hpp"
+
 #include <cmath>
 #include <iostream>
+#include <limits>
+#include <cassert>
 
 sf::Texture weapon::texture{};
 std::map<std::string, sf::Sprite> weapon::sprites{};
@@ -210,20 +214,48 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 	if(target == UINT32_MAX)
 		return ;
 
-	cell *current_cell = &info->get_cell(mech_cell_position);
+	const cell *start_cell = &info->get_cell(mech_cell_position);
 	const cell *target_cell = &info->get_cell(target);
+
+	const sf::Vector2f &from_point = start_cell->pos;
 	const sf::Vector2f &to_point = target_cell->pos;
 
-	while(current_cell != target_cell){
-		sf::Vector2f from_point = current_cell->pos;
-		sf::Vector2f diff = to_point - from_point;
+	line line = get_line(from_point, to_point);
 
-		cd_t dir = get_direction(diff);
+	auto nearest = [to_point, info, &line](const cell *from_cell) -> uint32_t{
+		uint32_t nearest_cell_index = UINT32_MAX;
+		float range = length(to_point - from_cell->pos);
 
-		client->fill_color_cell(info, current_cell->indeces[(int)dir],
+		for(cd_t dir = cd_t::BEGIN; dir != cd_t::END; dir = cd_t((int)dir + 1)){
+			uint32_t current_cell_index = from_cell->indeces[(int)dir];
+			constexpr float precision = 0.0001f;
+
+			float current_distance =
+				std::abs(distance(line,  info->get_cell(current_cell_index).pos));
+			float nearest_distance = nearest_cell_index != UINT32_MAX ?
+				std::abs(distance(line,  info->get_cell(nearest_cell_index).pos)) :
+				std::numeric_limits<float>::max();
+
+			float current_range =
+				length(to_point - info->get_cell(current_cell_index).pos);
+
+			if((current_range < range) && (current_distance < (nearest_distance + precision))){
+
+				nearest_cell_index = current_cell_index;
+			}
+		}
+		assert(nearest_cell_index != UINT32_MAX);
+		return nearest_cell_index;
+	};
+
+	std::list<uint32_t> path{mech_cell_position};
+	while(path.back() != target){
+		path.emplace_back(nearest(&info->get_cell(path.back())));
+	}
+
+	for(uint32_t &cell_index : path){
+		client->fill_color_cell(info, cell_index,
 			sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
-
-		current_cell = &info->get_cell(current_cell->indeces[(int)dir]);
 	}
 }
 
