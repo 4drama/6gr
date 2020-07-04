@@ -228,6 +228,8 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 
 		for(cd_t dir = cd_t::BEGIN; dir != cd_t::END; dir = cd_t((int)dir + 1)){
 			uint32_t current_cell_index = from_cell->indeces[(int)dir];
+			if(current_cell_index == UINT32_MAX)
+				continue;
 			constexpr float precision = 0.0001f;
 
 			float current_distance =
