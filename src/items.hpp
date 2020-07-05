@@ -160,11 +160,17 @@ public:
 		const sf::Vector2f& position) override;
 	void draw_active_zone(uint32_t mech_cell_position, game_info *info,
 		client *client) override;
+
+	std::list<uint32_t> get_path(game_info *info,
+		uint32_t start_cell, uint32_t target_cell, uint32_t depth) const;
 private:
 	mutable sf::Text text;
 
 	float curr_delay = 0;
 	float delay;
+
+	uint32_t range = 8;
+	uint32_t aoe = 1;
 };
 
 class legs : public item, public turn_on{

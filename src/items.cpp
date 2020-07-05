@@ -207,15 +207,12 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
-void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, client *client){
+std::list<uint32_t> weapon::get_path(game_info *info,
+	uint32_t start_cell_index, uint32_t target_cell_index, uint32_t depth) const{
 	using cd_t = cardinal_directions_t;
 
-	uint32_t target = get_cell_index_under_mouse(info, client);
-	if(target == UINT32_MAX)
-		return ;
-
-	const cell *start_cell = &info->get_cell(mech_cell_position);
-	const cell *target_cell = &info->get_cell(target);
+	const cell *start_cell = &info->get_cell(start_cell_index);
+	const cell *target_cell = &info->get_cell(target_cell_index);
 
 	const sf::Vector2f &from_point = start_cell->pos;
 	const sf::Vector2f &to_point = target_cell->pos;
@@ -250,12 +247,66 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 		return nearest_cell_index;
 	};
 
-	std::list<uint32_t> path{mech_cell_position};
-	while(path.back() != target){
+	std::list<uint32_t> path{start_cell_index};
+	for(uint32_t i = 0; (i < depth) && (path.back() != target_cell_index); ++i){
 		path.emplace_back(nearest(&info->get_cell(path.back())));
 	}
 
+	return path;
+}
+
+namespace{
+
+std::list<uint32_t> get_area_f(game_info *info, uint32_t cell_index, uint32_t depth){
+	using cd_t = cardinal_directions_t;
+
+	std::list<uint32_t> res{cell_index};
+	if(depth != 0){
+		const cell &curr_cell = info->get_cell(cell_index);
+		for(cd_t dir = cd_t::BEGIN; dir != cd_t::END; dir = cd_t((int)dir + 1)){
+			auto part = get_area_f(info, curr_cell.indeces[(int)dir], depth - 1);
+			res.merge(part);
+		}
+	}
+
+	res.sort();
+	res.unique();
+	return res;
+}
+
+}
+
+void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, client *client){
+	uint32_t target = get_cell_index_under_mouse(info, client);
+	if(target == UINT32_MAX)
+		return ;
+
+	std::list<uint32_t> path =
+		this->get_path(info, mech_cell_position, target, this->range);
+
+	std::vector<uint32_t> vision_indeces(client->get_vision_indeces(info));
+	std::sort(vision_indeces.begin(), vision_indeces.end());
+	for(auto it = ++path.begin(); it != path.end(); ++it){
+		auto curr_cell = info->get_cell(*it);
+		if( client->check_previously_visible(info, *it)){
+			auto res = std::find(vision_indeces.begin(), vision_indeces.end(), *it);
+			if( ((res != vision_indeces.end()) && (curr_cell.unit != nullptr)) ||
+				(info->get_cell(*it).is_terrain_obstacle())){
+				path.erase(++it, path.end());
+				break;
+			}
+		}
+	}
+
+	std::list<uint32_t> area = get_area_f(info, path.back(), this->aoe);
+	path.erase(std::prev(path.end(), this->aoe + 1), path.end());
+
 	for(uint32_t &cell_index : path){
+		client->fill_color_cell(info, cell_index,
+			sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
+	}
+
+	for(uint32_t &cell_index : area){
 		client->fill_color_cell(info, cell_index,
 			sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
 	}

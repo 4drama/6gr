@@ -84,6 +84,10 @@ struct terrain{
 
 	terrain_en type;
 	std::vector<object> objects;
+
+	inline bool is_soft_obstacle() const noexcept {
+		return (this->type == terrain_en::MOUNTAIN)/* || (this->type == terrain_en::PALM)*/ ?
+		true : false; };
 };
 
 cardinal_directions_t against(cardinal_directions_t dir);
@@ -109,6 +113,14 @@ public:
 	std::shared_ptr<unit> unit = nullptr;
 
 	std::vector<bool> player_visible;
+
+	inline bool is_terrain_obstacle() const noexcept {
+		return this->ter.is_soft_obstacle(); };
+
+	inline bool is_soft_obstacle() const noexcept {
+		return (unit != nullptr) || this->is_terrain_obstacle() ?
+		true : false; };
+
 };
 
 struct player_info{

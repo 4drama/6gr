@@ -388,6 +388,16 @@ void client::show_cursor_point(){
 	this->window.draw(circle);
 }
 
+bool client::check_previously_visible(game_info *info, uint32_t cell_index) const noexcept{
+	std::vector<bool> players_visible = info->get_cell(cell_index).player_visible;
+	std::list<uint32_t> vision_players = this->player->get_vision_players_indeces();
+	for(uint32_t player_index : vision_players){
+		if(players_visible[player_index] == true)
+			return true;
+	}
+	return false;
+}
+
 std::vector<uint32_t> client::get_vision_indeces(game_info *info) const{
 	std::vector<uint32_t> vision_indeces{};
 

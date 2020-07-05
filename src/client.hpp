@@ -60,6 +60,7 @@ public:
 	void draw_item_shape(const item_shape &shape) const;
 	void show_cursor_point();
 
+	bool check_previously_visible(game_info *info, uint32_t cell_index) const noexcept;
 	std::vector<uint32_t> get_vision_indeces(game_info *info) const;
 	sf::Vector2f mouse_on_map() const;
 
