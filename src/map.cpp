@@ -1113,6 +1113,19 @@ void game_info::update(float time){
 			curr_unit->update(this, player_index, time);
 		}
 	}
+
+	for(auto it = projectiles.begin(); it != projectiles.end(); it++){
+		const std::shared_ptr<projectile>& projectile_ptr = *it;
+		projectile_ptr->update(this, time);
+		if(projectile_ptr->is_explosion()){
+			std::list<uint32_t> area = get_area(this, projectile_ptr->get_cell_index(),
+				projectile_ptr->get_aoe());
+			it = --projectiles.erase(it);
+
+			// TO DO: explosion
+			std::cerr << "BABAH" << std::endl;
+		}
+	}
 }
 
 std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_indeces){
@@ -1127,4 +1140,75 @@ std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_i
 		}
 	}
 	return &map;
+}
+
+std::list<uint32_t> get_path(game_info *info,
+	uint32_t start_cell_index, uint32_t target_cell_index, uint32_t depth){
+	using cd_t = cardinal_directions_t;
+
+	const cell *start_cell = &info->get_cell(start_cell_index);
+	const cell *target_cell = &info->get_cell(target_cell_index);
+
+	const sf::Vector2f &from_point = start_cell->pos;
+	const sf::Vector2f &to_point = target_cell->pos;
+
+	line line = get_line(from_point, to_point);
+
+	auto nearest = [to_point, info, &line](const cell *from_cell) -> uint32_t{
+		uint32_t nearest_cell_index = UINT32_MAX;
+		float range = length(to_point - from_cell->pos);
+
+		for(cd_t dir = cd_t::BEGIN; dir != cd_t::END; dir = cd_t((int)dir + 1)){
+			uint32_t current_cell_index = from_cell->indeces[(int)dir];
+			if(current_cell_index == UINT32_MAX)
+				continue;
+			constexpr float precision = 0.0001f;
+
+			float current_distance =
+				std::abs(distance(line,  info->get_cell(current_cell_index).pos));
+			float nearest_distance = nearest_cell_index != UINT32_MAX ?
+				std::abs(distance(line,  info->get_cell(nearest_cell_index).pos)) :
+				std::numeric_limits<float>::max();
+
+			float current_range =
+				length(to_point - info->get_cell(current_cell_index).pos);
+
+			if((current_range < range) && (current_distance < (nearest_distance + precision))){
+
+				nearest_cell_index = current_cell_index;
+			}
+		}
+		assert(nearest_cell_index != UINT32_MAX);
+		return nearest_cell_index;
+	};
+
+	std::list<uint32_t> path{start_cell_index};
+	for(uint32_t i = 0; (i < depth) && (path.back() != target_cell_index); ++i){
+		path.emplace_back(nearest(&info->get_cell(path.back())));
+	}
+
+	return path;
+}
+
+std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t depth,
+	bool is_root, cardinal_directions_t main_dir){
+	using cd_t = cardinal_directions_t;
+
+	std::list<uint32_t> res{cell_index};
+	if(depth != 0){
+		const cell &curr_cell = info->get_cell(cell_index);
+		for(cd_t dir = is_root ? cd_t::BEGIN : previous(main_dir);
+			dir != (is_root ? cd_t::END : next(main_dir));
+			dir = is_root ? cd_t((int)dir + 1) : next(dir)){
+
+			if(curr_cell.indeces[(int)dir] != UINT32_MAX){
+				auto part = get_area(info, curr_cell.indeces[(int)dir], depth - 1, false, dir);
+				res.merge(part);
+			}
+		}
+	}
+
+	res.sort();
+	res.unique();
+	return res;
 }

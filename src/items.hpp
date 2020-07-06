@@ -147,6 +147,8 @@ class weapon : public item, public path_draw{
 
 	static void load_sprites();
 public:
+	void use(game_info *info, mech* owner, uint32_t target_cell);
+
 	inline weapon* is_weapon() noexcept override {return this;};
 
 	weapon(std::string name, float delay);
@@ -161,15 +163,13 @@ public:
 	void draw_active_zone(uint32_t mech_cell_position, game_info *info,
 		client *client) override;
 
-	std::list<uint32_t> get_path(game_info *info,
-		uint32_t start_cell, uint32_t target_cell, uint32_t depth) const;
 private:
 	mutable sf::Text text;
 
 	float curr_delay = 0;
 	float delay;
 
-	uint32_t range = 4;
+	uint32_t range = 5;
 	uint32_t aoe = 1;
 };
 

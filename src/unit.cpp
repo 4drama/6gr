@@ -2,8 +2,44 @@
 
 #include <cmath>
 #include <iostream>
+#include <cassert>
 
 std::map<std::string, sf::Texture> unit::textures{};
+
+sf::Texture projectile::texture{};
+std::map<std::string, sf::Sprite> projectile::sprites{};
+
+void projectile::load_sprites(){
+	projectile::texture.loadFromFile("./../data/torpedo.png");
+
+	sprites["torpedo"] = sf::Sprite(projectile::texture,
+		sf::IntRect(0, 0, 41, 14));
+	sprites["torpedo"].setPosition(0, 0);
+}
+
+projectile::projectile(std::list<uint32_t> path_, uint32_t cell_index_, uint32_t aoe_)
+	: path(path_), cell_index(cell_index_), aoe(aoe_){
+	this->path.pop_front();
+	if(projectile::sprites.empty())
+		projectile::load_sprites();
+}
+
+void projectile::update(game_info *info, float time){
+	assert(path.size() != 0);
+
+	this->path_progress +=  this->speed * (time / 10000);
+
+	if(this->path_progress > 1){
+		this->cell_index = this->path.front();
+		this->path.pop_front();
+		this->path_progress -= 1;
+//		this->lifetime -= 1;
+
+		if( this->path.empty() || info->get_cell(this->cell_index).is_soft_obstacle()){
+			this->explosion = true;
+		}
+	}
+}
 
 void unit::update_path(game_info *info, uint32_t player_index, uint32_t target_cell){
 	auto old_front_cell = this->path.front();
@@ -360,7 +396,7 @@ bool mech::event(sf::Event event, game_info *info, uint32_t player_index,
 		switch(event.mouseButton.button){
 			case sf::Mouse::Button::Left :
 				if(this->waiting_confirm != nullptr){
-					std::cerr << "babah" << std::endl;
+					this->waiting_confirm->is_weapon()->use(info, this, target_cell);
 					this->waiting_confirm = nullptr;
 					return true;
 				}

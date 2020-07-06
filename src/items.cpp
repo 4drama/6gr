@@ -96,6 +96,16 @@ weapon::weapon(std::string name, float delay_)
 	this->text.setPosition(39, 5);
 }
 
+void weapon::use(game_info *info, mech* owner, uint32_t target_cell){
+	if(target_cell == UINT32_MAX)
+		return ;
+
+	std::list<uint32_t> path =
+		get_path(info, owner->cell_index, target_cell, this->range);
+
+	info->add_projectile(
+		std::make_shared<projectile>(path, owner->cell_index, this->aoe));
+}
 
 bool weapon::get_ready(const mech* owner) const noexcept{
 	bool status = false;
@@ -207,88 +217,13 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
-std::list<uint32_t> weapon::get_path(game_info *info,
-	uint32_t start_cell_index, uint32_t target_cell_index, uint32_t depth) const{
-	using cd_t = cardinal_directions_t;
-
-	const cell *start_cell = &info->get_cell(start_cell_index);
-	const cell *target_cell = &info->get_cell(target_cell_index);
-
-	const sf::Vector2f &from_point = start_cell->pos;
-	const sf::Vector2f &to_point = target_cell->pos;
-
-	line line = get_line(from_point, to_point);
-
-	auto nearest = [to_point, info, &line](const cell *from_cell) -> uint32_t{
-		uint32_t nearest_cell_index = UINT32_MAX;
-		float range = length(to_point - from_cell->pos);
-
-		for(cd_t dir = cd_t::BEGIN; dir != cd_t::END; dir = cd_t((int)dir + 1)){
-			uint32_t current_cell_index = from_cell->indeces[(int)dir];
-			if(current_cell_index == UINT32_MAX)
-				continue;
-			constexpr float precision = 0.0001f;
-
-			float current_distance =
-				std::abs(distance(line,  info->get_cell(current_cell_index).pos));
-			float nearest_distance = nearest_cell_index != UINT32_MAX ?
-				std::abs(distance(line,  info->get_cell(nearest_cell_index).pos)) :
-				std::numeric_limits<float>::max();
-
-			float current_range =
-				length(to_point - info->get_cell(current_cell_index).pos);
-
-			if((current_range < range) && (current_distance < (nearest_distance + precision))){
-
-				nearest_cell_index = current_cell_index;
-			}
-		}
-		assert(nearest_cell_index != UINT32_MAX);
-		return nearest_cell_index;
-	};
-
-	std::list<uint32_t> path{start_cell_index};
-	for(uint32_t i = 0; (i < depth) && (path.back() != target_cell_index); ++i){
-		path.emplace_back(nearest(&info->get_cell(path.back())));
-	}
-
-	return path;
-}
-
-namespace{
-
-std::list<uint32_t> get_area_f(game_info *info, uint32_t cell_index, uint32_t depth,
-	bool is_root = true, cardinal_directions_t main_dir = cardinal_directions_t::BEGIN){
-	using cd_t = cardinal_directions_t;
-
-	std::list<uint32_t> res{cell_index};
-	if(depth != 0){
-		const cell &curr_cell = info->get_cell(cell_index);
-		for(cd_t dir = is_root ? cd_t::BEGIN : previous(main_dir);
-			dir != (is_root ? cd_t::END : next(main_dir));
-			dir = is_root ? cd_t((int)dir + 1) : next(dir)){
-
-			if(curr_cell.indeces[(int)dir] != UINT32_MAX){
-				auto part = get_area_f(info, curr_cell.indeces[(int)dir], depth - 1, false, dir);
-				res.merge(part);
-			}
-		}
-	}
-
-	res.sort();
-	res.unique();
-	return res;
-}
-
-}
-
 void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, client *client){
 	uint32_t target = get_cell_index_under_mouse(info, client);
 	if(target == UINT32_MAX)
 		return ;
 
 	std::list<uint32_t> path =
-		this->get_path(info, mech_cell_position, target, this->range);
+		get_path(info, mech_cell_position, target, this->range);
 
 	std::vector<uint32_t> vision_indeces(client->get_vision_indeces(info));
 	std::sort(vision_indeces.begin(), vision_indeces.end());
@@ -304,7 +239,7 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 		}
 	}
 
-	std::list<uint32_t> area = get_area_f(info, path.back(), this->aoe);
+	std::list<uint32_t> area = get_area(info, path.back(), this->aoe);
 	path.erase(std::prev(path.end(), this->aoe + 1), path.end());
 
 	for(uint32_t &cell_index : path){

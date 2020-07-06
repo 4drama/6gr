@@ -17,6 +17,30 @@ class item;
 class legs;
 class engine;
 
+class projectile{
+	static sf::Texture texture;
+	static std::map<std::string, sf::Sprite> sprites;
+
+	static void load_sprites();
+public:
+	projectile(std::list<uint32_t> path, uint32_t cell_index, uint32_t aoe);
+
+	inline bool is_explosion() const noexcept {return this->explosion;};
+	inline uint32_t get_aoe() const noexcept {return this->aoe;};
+	inline uint32_t get_cell_index() const noexcept {return this->cell_index;};
+	void update(game_info *info, float time);
+private:
+	uint32_t aoe;
+	float speed = 10;
+	bool explosion = false;
+//	uint32_t lifetime = 4;
+
+	uint32_t cell_index;
+
+	std::list<uint32_t> path;
+	float path_progress = 0;
+};
+
 struct unit : std::enable_shared_from_this<unit>{
 	static std::map<std::string, sf::Texture> textures;
 
@@ -49,13 +73,6 @@ private:
 
 protected:
 	void update_path(game_info *info, uint32_t player_index, uint32_t target_cell);
-};
-
-class rocket : public unit{
-public:
-	rocket(uint32_t cell_index) : unit(cell_index, 0){};
-
-	inline float get_speed(terrain_en ter_type) const noexcept override {return 1;};
 };
 
 struct mech_status {

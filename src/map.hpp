@@ -10,6 +10,7 @@ struct object;
 struct terrain;
 class cell;
 class unit;
+class projectile;
 struct player;
 struct game_info;
 
@@ -111,6 +112,7 @@ public:
 		UINT32_MAX, UINT32_MAX, UINT32_MAX };
 
 	std::shared_ptr<unit> unit = nullptr;
+//	std::list<std::shared_ptr<projectile>> projectiles;
 
 	std::vector<bool> player_visible;
 
@@ -165,6 +167,7 @@ struct player{
 };
 
 struct game_info{
+	std::list<std::shared_ptr<projectile>> projectiles;
 
 	std::vector<cell> map;
 	std::vector<player> players;
@@ -182,6 +185,9 @@ struct game_info{
 	void update(float time);
 
 	void announce_war(uint32_t player_index_1, uint32_t player_index_2);
+
+	inline void add_projectile(std::shared_ptr<projectile> projectile_ptr){
+		projectiles.emplace_back(projectile_ptr);};
 };
 
 std::vector<cell> generate_world(uint32_t size);
@@ -214,5 +220,11 @@ void create_transform_shape(const client *client, sf::Vector2f pos,
 
 std::vector<uint32_t> open_adjacent(game_info *info, uint32_t player_index,
 	uint32_t cell_index, uint32_t depth);
+
+std::list<uint32_t> get_path(game_info *info,
+	uint32_t start_cell_index, uint32_t target_cell_index, uint32_t depth);
+
+std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t depth,
+	bool is_root = true, cardinal_directions_t main_dir = cardinal_directions_t::BEGIN);
 
 #endif

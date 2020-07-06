@@ -269,9 +269,15 @@ void client::draw(game_info *info, float time){
 			unit_ptr->draw_gui(info, this);
 		}
 
+		for(auto &projectile_ptr : info->projectiles){
+			this->fill_color_cell(info, projectile_ptr->get_cell_index(),
+				sf::Color(255, 0, 0));
+		}
+
 		for(auto &win : this->game_windows){
 			win.draw(&window, this->get_view_scale());
 		}
+
 
 		this->window.display();
 	}
