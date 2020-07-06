@@ -169,7 +169,7 @@ private:
 	float curr_delay = 0;
 	float delay;
 
-	uint32_t range = 8;
+	uint32_t range = 4;
 	uint32_t aoe = 1;
 };
 

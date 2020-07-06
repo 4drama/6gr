@@ -257,15 +257,21 @@ std::list<uint32_t> weapon::get_path(game_info *info,
 
 namespace{
 
-std::list<uint32_t> get_area_f(game_info *info, uint32_t cell_index, uint32_t depth){
+std::list<uint32_t> get_area_f(game_info *info, uint32_t cell_index, uint32_t depth,
+	bool is_root = true, cardinal_directions_t main_dir = cardinal_directions_t::BEGIN){
 	using cd_t = cardinal_directions_t;
 
 	std::list<uint32_t> res{cell_index};
 	if(depth != 0){
 		const cell &curr_cell = info->get_cell(cell_index);
-		for(cd_t dir = cd_t::BEGIN; dir != cd_t::END; dir = cd_t((int)dir + 1)){
-			auto part = get_area_f(info, curr_cell.indeces[(int)dir], depth - 1);
-			res.merge(part);
+		for(cd_t dir = is_root ? cd_t::BEGIN : previous(main_dir);
+			dir != (is_root ? cd_t::END : next(main_dir));
+			dir = is_root ? cd_t((int)dir + 1) : next(dir)){
+
+			if(curr_cell.indeces[(int)dir] != UINT32_MAX){
+				auto part = get_area_f(info, curr_cell.indeces[(int)dir], depth - 1, false, dir);
+				res.merge(part);
+			}
 		}
 	}
 
