@@ -69,15 +69,12 @@ void projectile::draw(game_info *info, client *client) const noexcept{
 		client->set_camera_offset(torpedo, current_position);
 		client->prepare_to_draw(torpedo);
 
-//============= rotate ==============
 		if(start_position.x < target_position.x){
 			torpedo.setScale(-0.2, -0.2);
-			torpedo.setRotation(this->angle);
 		} else {
 			torpedo.setScale(0.2, -0.2);
-			torpedo.setRotation(-this->angle);
 		}
-//-----------------------------------
+		torpedo.setRotation(this->angle);
 
 		client->get_window().draw(torpedo);
 	}
