@@ -566,8 +566,9 @@ float mech::move_calculate(float time, terrain_en ter_type) noexcept{
 }
 
 void unit::open_vision(game_info *info, uint32_t player_index){
+	bool is_higher = info->get_cell(this->cell_index).ter.type == terrain_en::MOUNTAIN;
 	this->vision_indeces = open_adjacent(info, player_index,
-		this->cell_index, this->vision_range);
+		this->cell_index, is_higher ? this->vision_range + 2 : this->vision_range);
 }
 
 void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
