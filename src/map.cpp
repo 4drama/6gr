@@ -658,7 +658,7 @@ sf::Color get_color_out_of_view_f(terrain_en terr){
 
 void draw_scheme_map_f(game_info *info, client *client){
 	for(auto &cell : info->map){
-		if(client->is_visable(&cell)){
+		if(client->is_open(&cell)){
 
 			sf::Vertex transform_shape[7];
 			create_transform_shape(client, draw_position(&cell, client),

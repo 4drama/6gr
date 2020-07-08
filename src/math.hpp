@@ -17,7 +17,7 @@ inline float length(sf::Vector2f vec);
 inline sf::Vector2f direction(sf::Vector2f vec);
 inline bool in_range(sf::Vector2f min, sf::Vector2f max, sf::Vector2f value);
 
-
+inline float deg_angle(sf::Vector2f vec);
 
 inline float length(sf::Vector2f vec){
 	return std::sqrt(pow(vec.x, 2) + pow(vec.y, 2));
@@ -41,6 +41,10 @@ inline line get_line (sf::Vector2f point_1, sf::Vector2f point_2){
 inline float distance(line line, sf::Vector2f point){
 	return ((line.A * point.x) + (line.B * point.y) + line.C)
 		/ (std::sqrt(pow(line.A, 2) + pow(line.B, 2)));
+}
+
+inline float deg_angle(sf::Vector2f vec){
+	return atan(vec.y / vec.x) * 180 / 3.14;
 }
 
 #endif

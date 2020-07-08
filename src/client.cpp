@@ -230,7 +230,7 @@ sf::Vector2f client::perspective(sf::Vector2f position) const {
 		* transform_rate + this->view.getCenter().y - depth / 3);
 }
 
-bool client::on_screen(cell *cell) const {
+bool client::on_screen(const cell *cell) const {
 	int cull = this->view.getSize().x;
 	if((draw_position(cell, this).x > cull) || (draw_position(cell, this).x < -cull))
 		return false;
@@ -239,7 +239,7 @@ bool client::on_screen(cell *cell) const {
 	return true;
 }
 
-bool client::is_visable(cell *cell) const {
+bool client::is_open(const cell *cell) const {
 	if(this->on_screen(cell)){
 		std::list<uint32_t> vision_players = this->player->get_vision_players_indeces();
 		for(auto& player_index : vision_players){
@@ -253,8 +253,9 @@ bool client::is_visable(cell *cell) const {
 void client::draw(game_info *info, float time){
 	if(this->window.isOpen()){
 		this->window.clear();
-
 		this->window.setView(this->view);
+		this->vision_map = *get_vision_map(info, this->player->get_vision_players_indeces());
+
 		draw_map(info, this, time);
 		gui::instance().draw(info, this);
 
@@ -270,8 +271,9 @@ void client::draw(game_info *info, float time){
 		}
 
 		for(auto &projectile_ptr : info->projectiles){
-			this->fill_color_cell(info, projectile_ptr->get_cell_index(),
-				sf::Color(255, 0, 0));
+		/*	this->fill_color_cell(info, projectile_ptr->get_cell_index(),
+				sf::Color(255, 0, 0));*/
+			projectile_ptr->draw(info, this);
 		}
 
 		for(auto &win : this->game_windows){

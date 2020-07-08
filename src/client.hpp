@@ -23,11 +23,20 @@ class client{
 public:
 	client(game_info *info, int width_, int height_, uint32_t player_index);
 
+	template<typename drawable_type>
+	void set_camera_offset(drawable_type& object,
+		sf::Vector2f offset = sf::Vector2f(0, 0)) const noexcept;
+
+	template<typename drawable_type>
+	void prepare_to_draw(drawable_type& object) const noexcept;
+
 	void set_camera(sf::Vector2f pos);
 	void move_camera(cardinal_directions_t dir, float speed);
 	void change_zoom(int value);
 	void change_show_grid();
 	void control_update(game_info *info, float time);
+
+	sf::RenderWindow& get_window() const{return window; };
 
 	float get_view_scale() const;
 	float get_view_width() const;
@@ -40,8 +49,9 @@ public:
 	const player_info& get_player_info() const;
 
 	sf::Vector2f perspective(sf::Vector2f position) const;
-	bool on_screen(cell *cell) const;
-	bool is_visable(cell *cell) const;
+	bool on_screen(const cell *cell) const;
+	bool is_open(const cell *cell) const;
+	bool is_visable(uint32_t cell_index) const;
 
 	void draw(game_info *info, float time);
 
@@ -85,6 +95,7 @@ private:
 
 	std::list<game_window> game_windows;
 	bool windows_interact(sf::Event event);
+	std::vector<bool> vision_map;
 };
 
 sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept;
@@ -99,5 +110,18 @@ bool is_inside(bounds_type bounds, sf::Vector2f pos){
 	else
 		return false;
 }
+
+inline bool client::is_visable(uint32_t cell_index) const{
+	return vision_map[cell_index]; };
+
+template<typename drawable_type>
+void client::set_camera_offset(drawable_type& object, sf::Vector2f offset) const noexcept{
+	object.setPosition(object.getPosition() + offset + camera_pos);
+};
+
+template<typename drawable_type>
+void client::prepare_to_draw(drawable_type& object) const noexcept{
+	object.setPosition(this->perspective(object.getPosition()));
+};
 
 #endif

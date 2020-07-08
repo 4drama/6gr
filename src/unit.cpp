@@ -1,5 +1,7 @@
 #include "unit.hpp"
 
+#include "math.hpp"
+
 #include <cmath>
 #include <iostream>
 #include <cassert>
@@ -15,19 +17,29 @@ void projectile::load_sprites(){
 	sprites["torpedo"] = sf::Sprite(projectile::texture,
 		sf::IntRect(0, 0, 41, 14));
 	sprites["torpedo"].setPosition(0, 0);
+	sprites["torpedo"].setScale(0.2, -0.2);
+	sprites["torpedo"].setOrigin(41 / 2, 14 / 2);
 }
 
-projectile::projectile(std::list<uint32_t> path_, uint32_t cell_index_, uint32_t aoe_)
-	: path(path_), cell_index(cell_index_), aoe(aoe_){
+projectile::projectile(game_info *info, std::list<uint32_t> path_,
+	uint32_t cell_index_, uint32_t aoe_)
+	: path(path_), start_cell_index(path_.front()),
+	cell_index(cell_index_), aoe(aoe_), length(path_.size() - 0.5f){
 	this->path.pop_front();
 	if(projectile::sprites.empty())
 		projectile::load_sprites();
+
+	const sf::Vector2f start_position = info->get_cell(start_cell_index).pos;
+	const sf::Vector2f target_position = info->get_cell(this->target_cell_index()).pos;
+	this->angle = deg_angle(target_position - start_position);
 }
 
 void projectile::update(game_info *info, float time){
 	assert(path.size() != 0);
 
-	this->path_progress +=  this->speed * (time / 10000);
+	const float distance = this->speed * (time / 10000);
+	this->path_progress += distance;
+	this->progress += distance / this->length;
 
 	if(this->path_progress > 1){
 		this->cell_index = this->path.front();
@@ -38,6 +50,36 @@ void projectile::update(game_info *info, float time){
 		if( this->path.empty() || info->get_cell(this->cell_index).is_soft_obstacle()){
 			this->explosion = true;
 		}
+	}
+}
+
+void projectile::draw(game_info *info, client *client) const noexcept{
+	const cell& current_cell = info->get_cell(this->cell_index);
+	if(client->is_visable(this->cell_index) && client->on_screen(&current_cell)){
+		client->fill_color_cell(info, this->get_cell_index(),
+		sf::Color(255, 0, 0));
+
+		const sf::Vector2f start_position = info->get_cell(start_cell_index).pos;
+		const sf::Vector2f target_position = info->get_cell(this->target_cell_index()).pos;
+
+		const sf::Vector2f current_position =
+		start_position + this->progress * (target_position - start_position);
+
+		sf::Sprite torpedo(sprites["torpedo"]);
+		client->set_camera_offset(torpedo, current_position);
+		client->prepare_to_draw(torpedo);
+
+//============= rotate ==============
+		if(start_position.x < target_position.x){
+			torpedo.setScale(-0.2, -0.2);
+			torpedo.setRotation(this->angle);
+		} else {
+			torpedo.setScale(0.2, -0.2);
+			torpedo.setRotation(-this->angle);
+		}
+//-----------------------------------
+
+		client->get_window().draw(torpedo);
 	}
 }
 

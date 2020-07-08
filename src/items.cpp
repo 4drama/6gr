@@ -104,7 +104,7 @@ void weapon::use(game_info *info, mech* owner, uint32_t target_cell){
 		get_path(info, owner->cell_index, target_cell, this->range);
 
 	info->add_projectile(
-		std::make_shared<projectile>(path, owner->cell_index, this->aoe));
+		std::make_shared<projectile>(info, path, owner->cell_index, this->aoe));
 }
 
 bool weapon::get_ready(const mech* owner) const noexcept{
@@ -239,17 +239,22 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 		}
 	}
 
-	std::list<uint32_t> area = get_area(info, path.back(), this->aoe);
-	path.erase(std::prev(path.end(), this->aoe + 1), path.end());
-
-	for(uint32_t &cell_index : path){
-		client->fill_color_cell(info, cell_index,
-			sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
-	}
+	std::list<uint32_t> area = get_area(info, mech_cell_position, this->range);
+	std::list<uint32_t> aoe = get_area(info, path.back(), this->aoe);
 
 	for(uint32_t &cell_index : area){
 		client->fill_color_cell(info, cell_index,
-			sf::Color(255, 0, 0), sf::Color(255, 0, 0, 70));
+			sf::Color(255, 255, 255, 30));
+	}
+
+	for(uint32_t &cell_index : path){
+		client->fill_color_cell(info, cell_index,
+			sf::Color(255, 0, 0));
+	}
+
+	for(uint32_t &cell_index : aoe){
+		client->fill_color_cell(info, cell_index,
+			sf::Color(255, 255, 255, 0), sf::Color(255, 0, 0, 70));
 	}
 }
 

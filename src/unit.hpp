@@ -23,19 +23,28 @@ class projectile{
 
 	static void load_sprites();
 public:
-	projectile(std::list<uint32_t> path, uint32_t cell_index, uint32_t aoe);
+	projectile(game_info *info, std::list<uint32_t> path,
+		uint32_t cell_index, uint32_t aoe);
 
 	inline bool is_explosion() const noexcept {return this->explosion;};
 	inline uint32_t get_aoe() const noexcept {return this->aoe;};
 	inline uint32_t get_cell_index() const noexcept {return this->cell_index;};
 	void update(game_info *info, float time);
+
+	void draw(game_info *info, client *client) const noexcept;
 private:
 	uint32_t aoe;
 	float speed = 10;
 	bool explosion = false;
 //	uint32_t lifetime = 4;
 
+	uint32_t start_cell_index;
 	uint32_t cell_index;
+	uint32_t target_cell_index() const noexcept {return path.back();};
+
+	float progress = 0.0f;
+	float length;
+	float angle = 0.0f;
 
 	std::list<uint32_t> path;
 	float path_progress = 0;
