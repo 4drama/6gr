@@ -300,6 +300,14 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 	}
 }
 
+std::shared_ptr<weapon::torpedo_info>
+weapon::torpedo_loading(std::shared_ptr<weapon::torpedo_info> torpedo) noexcept{
+	auto tmp_torpedo = this->torpedo_info_ptr;
+	this->torpedo_info_ptr = torpedo;
+	this->curr_delay = 0;
+	return tmp_torpedo;
+}
+
 void legs::load_sprites(){
 	legs::texture.loadFromFile("./../data/legs_button.png");
 

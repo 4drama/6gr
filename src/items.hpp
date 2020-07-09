@@ -167,11 +167,7 @@ public:
 		client *client) override;
 
 	std::shared_ptr<weapon::torpedo_info>
-	torpedo_loading(std::shared_ptr<weapon::torpedo_info> torpedo){
-		auto tmp_torpedo = this->torpedo_info_ptr;
-		this->torpedo_info_ptr = torpedo;
-		return tmp_torpedo;
-	}
+	torpedo_loading(std::shared_ptr<weapon::torpedo_info> torpedo) noexcept;
 
 private:
 	mutable sf::Text text;
