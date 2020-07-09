@@ -141,12 +141,15 @@ private:
 	uint32_t slots = 0;
 };
 
+
 class weapon : public item, public path_draw{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
 	static void load_sprites();
 public:
+	class torpedo_info;
+
 	void use(game_info *info, mech* owner, uint32_t target_cell);
 
 	inline weapon* is_weapon() noexcept override {return this;};
@@ -154,7 +157,7 @@ public:
 	weapon(std::string name, float delay);
 	void update(mech* owner, float time) override;
 
-	inline bool has_resources(const mech* owner) const noexcept { return true;};
+	bool has_resources(const mech* owner) const noexcept;
 	inline float get_delay() const noexcept { return curr_delay / delay;};
 	bool get_ready(const mech* owner) const noexcept;
 
@@ -163,13 +166,45 @@ public:
 	void draw_active_zone(uint32_t mech_cell_position, game_info *info,
 		client *client) override;
 
+	std::shared_ptr<weapon::torpedo_info>
+	torpedo_loading(std::shared_ptr<weapon::torpedo_info> torpedo){
+		auto tmp_torpedo = this->torpedo_info_ptr;
+		this->torpedo_info_ptr = torpedo;
+		return tmp_torpedo;
+	}
+
 private:
 	mutable sf::Text text;
+
+	float shot_energy;
+	float shot_heat;
+
+	float delay_energy;
 
 	float curr_delay = 0;
 	float delay;
 
 	uint32_t range = 5;
+	std::shared_ptr<weapon::torpedo_info> torpedo_info_ptr = nullptr;
+};
+
+class weapon::torpedo_info{
+public:
+	virtual void create_projectile(game_info *info, mech* owner,
+		std::list<uint32_t> path, uint32_t target_cell) const = 0;
+	virtual std::list<uint32_t> get_damage_zone(uint32_t target_cell,
+		game_info *info, client *client) const = 0;
+private:
+
+};
+
+class explosive_torpedo : public weapon::torpedo_info{
+public:
+	void create_projectile(game_info *info, mech* owner,
+		std::list<uint32_t> path, uint32_t target_cell) const override;
+	std::list<uint32_t> get_damage_zone(uint32_t target_cell,
+		game_info *info, client *client) const override;
+private:
 	uint32_t aoe = 1;
 };
 

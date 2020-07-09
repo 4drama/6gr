@@ -17,7 +17,7 @@ void projectile::load_sprites(){
 	sprites["torpedo"] = sf::Sprite(projectile::texture,
 		sf::IntRect(0, 0, 41, 14));
 	sprites["torpedo"].setPosition(0, 0);
-	sprites["torpedo"].setScale(0.2, -0.2);
+	sprites["torpedo"].setScale(projectile::scale, -projectile::scale);
 	sprites["torpedo"].setOrigin(41 / 2, 14 / 2);
 }
 
@@ -69,10 +69,10 @@ void projectile::draw(game_info *info, client *client) const noexcept{
 		client->set_camera_offset(torpedo, current_position);
 		client->prepare_to_draw(torpedo);
 
-		if(start_position.x < target_position.x){
-			torpedo.setScale(-0.2, -0.2);
+		if(start_position.x <= target_position.x){
+			torpedo.setScale(-projectile::scale, -projectile::scale);
 		} else {
-			torpedo.setScale(0.2, -0.2);
+			torpedo.setScale(projectile::scale, -projectile::scale);
 		}
 		torpedo.setRotation(this->angle);
 
@@ -552,6 +552,19 @@ float mech::get_available_rate(mech_status necessary) const noexcept{
 	return rate > 0 ? rate : 0;
 }
 
+bool mech::try_spend(const mech_status &status) noexcept{
+	if(this->get_available_rate(status) == 1.0f){
+		this->calculate_status(status);
+		return true;
+	} else
+		return false;
+}
+
+bool mech::try_loading_torpedo(weapon* weapon_ptr){
+	auto previous_torpedo =
+		weapon_ptr->torpedo_loading(std::make_shared<explosive_torpedo>());
+}
+
 float mech::move_calculate(float time, terrain_en ter_type) noexcept{
 	if(!this->legs_ptr)
 		return 0;
@@ -631,7 +644,7 @@ void mech::update_v(game_info *info, uint32_t player_index, float time){
 				this->calculate_status(diff * rate);
 			}
 
-			item->update(this, time);
+			item->update(this, time / 10000);
 		}
 	};
 	update(this->torso);

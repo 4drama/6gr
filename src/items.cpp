@@ -90,21 +90,34 @@ item_shape turn_on::get_draw_shape(const mech* owner, client *client,
 }
 
 weapon::weapon(std::string name, float delay_)
-	: item(name, 10, 3), delay(delay_), text(name, get_font(), 22){
+	: item(name, 10, 3), delay(delay_ / 10000), text(name, get_font(), 22),
+	shot_energy(-25), shot_heat(40), delay_energy(-5){
 	if(weapon::sprites.empty())
 		weapon::load_sprites();
 	this->text.setPosition(39, 5);
 }
 
+bool weapon::has_resources(const mech* owner) const noexcept{
+	const auto status = mech_status::current(this->shot_energy, this->shot_heat);
+	if((owner->get_available_rate(status) == 1.0f) && torpedo_info_ptr){
+		return true;
+	} else
+		return false;
+};
+
 void weapon::use(game_info *info, mech* owner, uint32_t target_cell){
 	if(target_cell == UINT32_MAX)
 		return ;
 
-	std::list<uint32_t> path =
-		get_path(info, owner->cell_index, target_cell, this->range);
+	const auto status = mech_status::current(this->shot_energy, this->shot_heat);
+	if(this->get_ready(owner) && owner->try_spend(status)){
+		std::list<uint32_t> path =
+			get_path(info, owner->cell_index, target_cell, this->range);
 
-	info->add_projectile(
-		std::make_shared<projectile>(info, path, owner->cell_index, this->aoe));
+		curr_delay = 0;
+		this->torpedo_info_ptr->create_projectile(info, owner, path, target_cell);
+		this->torpedo_info_ptr = nullptr;
+	}
 }
 
 bool weapon::get_ready(const mech* owner) const noexcept{
@@ -116,9 +129,38 @@ bool weapon::get_ready(const mech* owner) const noexcept{
 }
 
 void weapon::update(mech* owner, float time){
-	if(this->curr_delay < this->delay){
-		this->curr_delay += time;
+	if(this->get_power_status()){
+		if(!torpedo_info_ptr){
+			owner->try_loading_torpedo(this);
+		}
+
+		if(this->curr_delay < this->delay){
+
+			if((this->curr_delay + time) > this->delay){
+				float diff = this->delay - (this->curr_delay + time);
+				time -= diff;
+			}
+			auto status =
+			mech_status::current(this->delay_energy * time, 0);
+			float rate = owner->get_available_rate(status);
+
+			if((rate != 0) && owner->try_spend(status * rate))
+			this->curr_delay += time * rate;
+		}
 	}
+}
+
+void explosive_torpedo::create_projectile(game_info *info, mech* owner,
+	std::list<uint32_t> path, uint32_t target_cell) const{
+
+	info->add_projectile(
+		std::make_shared<projectile>(info, path, owner->cell_index, this->aoe));
+}
+
+std::list<uint32_t> explosive_torpedo::get_damage_zone(uint32_t target_cell,
+	game_info *info, client *client) const {
+
+	return get_area(info, target_cell, this->aoe);
 }
 
 void weapon::load_sprites(){
@@ -240,7 +282,7 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 	}
 
 	std::list<uint32_t> area = get_area(info, mech_cell_position, this->range);
-	std::list<uint32_t> aoe = get_area(info, path.back(), this->aoe);
+	std::list<uint32_t> aoe = torpedo_info_ptr->get_damage_zone(path.back(), info, client);
 
 	for(uint32_t &cell_index : area){
 		client->fill_color_cell(info, cell_index,

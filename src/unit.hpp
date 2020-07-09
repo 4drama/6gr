@@ -16,6 +16,7 @@
 class item;
 class legs;
 class engine;
+class weapon;
 
 class projectile{
 	static sf::Texture texture;
@@ -33,6 +34,8 @@ public:
 
 	void draw(game_info *info, client *client) const noexcept;
 private:
+	static constexpr float scale = 0.2;
+
 	uint32_t aoe;
 	float speed = 10;
 	bool explosion = false;
@@ -181,6 +184,9 @@ public:
 
 	inline void set_waiting_item(item *item) noexcept{this->waiting_confirm = item;};
 	inline item *get_waiting_item() const noexcept{return waiting_confirm;};
+
+	bool try_spend(const mech_status &status) noexcept;
+	bool try_loading_torpedo(weapon* weapon_ptr);
 private:
 	item *waiting_confirm = nullptr;
 
