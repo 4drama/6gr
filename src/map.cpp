@@ -1126,6 +1126,14 @@ void game_info::update(float time){
 			std::cerr << "BABAH" << std::endl;
 		}
 	}
+
+	for(auto it = effects.begin(); it != effects.end(); it++){
+		const std::shared_ptr<effect>& effect_ptr = *it;
+		effect_ptr->update(time);
+		if(!effect_ptr->is_life()){
+			it = --effects.erase(it);
+		}
+	}
 }
 
 std::vector<bool>* get_vision_map(game_info *info, std::list<uint32_t> players_indeces){
@@ -1212,3 +1220,18 @@ std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t dept
 	res.unique();
 	return res;
 }
+/*
+void cell::update(float time) noexcept{
+	if(this->effect){
+		if(this->effect->is_life())
+			this->effect->update(time);
+		else
+			this->effect = nullptr;
+	}
+};
+
+void cell::draw(game_info *info, client *client) const noexcept{
+	if(this->effect){
+		this->effect->draw(info, client);
+	}
+};*/

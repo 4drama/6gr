@@ -276,6 +276,10 @@ void client::draw(game_info *info, float time){
 			projectile_ptr->draw(info, this);
 		}
 
+		for(auto &effect_ptr : info->effects){
+			effect_ptr->draw(info, this);
+		}
+
 		for(auto &win : this->game_windows){
 			win.draw(&window, this->get_view_scale());
 		}

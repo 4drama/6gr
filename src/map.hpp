@@ -13,8 +13,10 @@ class unit;
 class projectile;
 struct player;
 struct game_info;
+class effect;
 
 #include "client.hpp"
+#include "effects.hpp"
 
 #include <vector>
 #include <cstdint>
@@ -112,6 +114,7 @@ public:
 		UINT32_MAX, UINT32_MAX, UINT32_MAX };
 
 	std::shared_ptr<unit> unit = nullptr;
+//	std::shared_ptr<effect> effect = nullptr;
 //	std::list<std::shared_ptr<projectile>> projectiles;
 
 	std::vector<bool> player_visible;
@@ -122,7 +125,6 @@ public:
 	inline bool is_soft_obstacle() const noexcept {
 		return (unit != nullptr) || this->is_terrain_obstacle() ?
 		true : false; };
-
 };
 
 struct player_info{
@@ -168,6 +170,7 @@ struct player{
 
 struct game_info{
 	std::list<std::shared_ptr<projectile>> projectiles;
+	std::list<std::shared_ptr<effect>> effects;
 
 	std::vector<cell> map;
 	std::vector<player> players;
@@ -186,8 +189,10 @@ struct game_info{
 
 	void announce_war(uint32_t player_index_1, uint32_t player_index_2);
 
-	inline void add_projectile(std::shared_ptr<projectile> projectile_ptr){
+	void add_projectile(std::shared_ptr<projectile> projectile_ptr){
 		projectiles.emplace_back(projectile_ptr);};
+	void add_effect(std::shared_ptr<effect> effect_ptr){
+		effects.emplace_back(effect_ptr);};
 };
 
 std::vector<cell> generate_world(uint32_t size);

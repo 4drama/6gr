@@ -49,6 +49,7 @@ void projectile::update(game_info *info, float time){
 
 		if( this->path.empty() || info->get_cell(this->cell_index).is_soft_obstacle()){
 			this->explosion = true;
+			info->add_effect(std::make_shared<effect>(cell_index));
 		}
 	}
 }
