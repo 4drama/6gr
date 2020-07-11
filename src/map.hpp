@@ -133,8 +133,7 @@ public:
 
 	void draw(game_info *info, client *client);
 
-	void add_crater(game_info *info, uint32_t cell_index) noexcept{
-		this->deform = create_crater(info, cell_index), ter.objects.clear();};
+	void add_crater(game_info *info, uint32_t cell_index) noexcept;
 };
 
 struct player_info{
@@ -205,6 +204,8 @@ struct game_info{
 		projectiles.emplace_back(projectile_ptr);};
 	void add_effect(std::shared_ptr<effect> effect_ptr){
 		effects.emplace_back(effect_ptr);};
+
+	void reopen_vision();
 };
 
 std::vector<cell> generate_world(uint32_t size);

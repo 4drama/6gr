@@ -1227,3 +1227,25 @@ void cell::draw(game_info *info, client *client){
 		deform->draw(info, client);
 	}
 }
+
+void cell::add_crater(game_info *info, uint32_t cell_index) noexcept{
+	this->deform = create_crater(info, cell_index);
+	this->ter.objects.clear();
+	if(ter.type == terrain_en::MOUNTAIN){
+		this->ter = terrain{terrain_en::PLAIN};
+		info->reopen_vision();
+	}
+};
+
+void game_info::reopen_vision(){
+	for(auto& player : players){
+		for(auto& unit : player.units){
+			for(auto player_index : player.info->alliance_players){
+				unit->open_vision(this, player_index);
+			}
+			for(auto player_index : player.info->control_players){
+				unit->open_vision(this, player_index);
+			}
+		}
+	}
+}
