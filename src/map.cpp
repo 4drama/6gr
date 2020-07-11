@@ -688,6 +688,7 @@ void draw_vision_map_f(game_info *info, client *client,
 					sprite.setPosition(client->perspective(draw_position(&cell, client) + obj.pos));
 					object_sprites->emplace_back(sprite);
 				}
+				cell.draw(info, client);
 			}
 		}
 	}
@@ -1220,18 +1221,9 @@ std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t dept
 	res.unique();
 	return res;
 }
-/*
-void cell::update(float time) noexcept{
-	if(this->effect){
-		if(this->effect->is_life())
-			this->effect->update(time);
-		else
-			this->effect = nullptr;
-	}
-};
 
-void cell::draw(game_info *info, client *client) const noexcept{
-	if(this->effect){
-		this->effect->draw(info, client);
+void cell::draw(game_info *info, client *client){
+	if(deform){
+		deform->draw(info, client);
 	}
-};*/
+}

@@ -14,6 +14,8 @@ class projectile;
 struct player;
 struct game_info;
 class effect;
+class static_effect;
+class animation;
 
 #include "client.hpp"
 #include "effects.hpp"
@@ -99,6 +101,8 @@ cardinal_directions_t previous(cardinal_directions_t dir);
 
 cardinal_directions_t get_direction(sf::Vector2f vec);
 
+extern std::shared_ptr<effect> create_crater(game_info *info, uint32_t cell_index);
+
 class cell{
 public:
 	static sf::Vector2f offset[(int)cardinal_directions_t::END];
@@ -114,6 +118,7 @@ public:
 		UINT32_MAX, UINT32_MAX, UINT32_MAX };
 
 	std::shared_ptr<unit> unit = nullptr;
+	std::shared_ptr<effect> deform = nullptr;
 //	std::shared_ptr<effect> effect = nullptr;
 //	std::list<std::shared_ptr<projectile>> projectiles;
 
@@ -125,6 +130,11 @@ public:
 	inline bool is_soft_obstacle() const noexcept {
 		return (unit != nullptr) || this->is_terrain_obstacle() ?
 		true : false; };
+
+	void draw(game_info *info, client *client);
+
+	void add_crater(game_info *info, uint32_t cell_index) noexcept{
+		this->deform = create_crater(info, cell_index), ter.objects.clear();};
 };
 
 struct player_info{
@@ -169,6 +179,8 @@ struct player{
 };
 
 struct game_info{
+	std::map<std::string, std::shared_ptr<animation>> animations;
+
 	std::list<std::shared_ptr<projectile>> projectiles;
 	std::list<std::shared_ptr<effect>> effects;
 
