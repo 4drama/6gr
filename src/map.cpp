@@ -1229,7 +1229,9 @@ void cell::draw(game_info *info, client *client){
 }
 
 void cell::add_crater(game_info *info, uint32_t cell_index) noexcept{
-	this->deform = create_crater(info, cell_index);
+	if(ter.type != terrain_en::RIVER){
+		this->deform = create_crater(info, cell_index);
+	}
 	this->ter.objects.clear();
 	if(ter.type == terrain_en::MOUNTAIN){
 		this->ter = terrain{terrain_en::PLAIN};
