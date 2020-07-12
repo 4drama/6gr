@@ -17,6 +17,7 @@ class item;
 class legs;
 class engine;
 class weapon;
+class torpedo_info;
 
 class projectile{
 	static sf::Texture texture;
@@ -24,8 +25,8 @@ class projectile{
 
 	static void load_sprites();
 public:
-	projectile(game_info *info, std::list<uint32_t> path,
-		uint32_t cell_index, uint32_t aoe);
+	projectile(game_info *info, std::list<uint32_t> path, uint32_t cell_index,
+		uint32_t aoe, std::shared_ptr<torpedo_info> torpedo_info_ptr);
 
 	inline bool is_explosion() const noexcept {return this->explosion;};
 	inline uint32_t get_aoe() const noexcept {return this->aoe;};
@@ -33,8 +34,12 @@ public:
 	void update(game_info *info, float time);
 
 	void draw(game_info *info, client *client) const noexcept;
+/*	const std::shared_ptr<torpedo_info>& get_info() const noexcept{
+		return this->torpedo_info_ptr;};*/
+	void detonate(game_info *info) const;
 private:
 	static constexpr float scale = 0.2;
+	std::shared_ptr<torpedo_info> torpedo_info_ptr;
 
 	uint32_t aoe;
 	float speed = 10;
@@ -76,6 +81,8 @@ struct unit : std::enable_shared_from_this<unit>{
 
 	virtual bool event(sf::Event event, game_info *info,
 		uint32_t player_index, uint32_t target_cell) noexcept;
+
+	virtual bool damage(float damage) noexcept {return false;};
 
 private:
 	void unit_update_move(game_info *info, uint32_t player_index, float time);
@@ -179,6 +186,8 @@ public:
 	bool interact_gui(game_info *info, client *client) override;
 	bool event(sf::Event event, game_info *info,
 		uint32_t player_index, uint32_t target_cell) noexcept override;
+
+	bool damage(float damage) noexcept override;
 
 	float get_available_rate(mech_status necessary) const noexcept;
 

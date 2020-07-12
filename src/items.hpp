@@ -13,6 +13,8 @@
 struct mech_status;
 class mech;
 
+class area;
+
 struct item_button{
 	sf::Sprite sprite;
 	std::function<void()> func;
@@ -141,6 +143,7 @@ private:
 	uint32_t slots = 0;
 };
 
+class torpedo_info;
 
 class weapon : public item, public path_draw{
 	static sf::Texture texture;
@@ -148,7 +151,6 @@ class weapon : public item, public path_draw{
 
 	static void load_sprites();
 public:
-	class torpedo_info;
 
 	void use(game_info *info, mech* owner, uint32_t target_cell);
 
@@ -166,8 +168,8 @@ public:
 	void draw_active_zone(uint32_t mech_cell_position, game_info *info,
 		client *client) override;
 
-	std::shared_ptr<weapon::torpedo_info>
-	torpedo_loading(std::shared_ptr<weapon::torpedo_info> torpedo) noexcept;
+	std::shared_ptr<torpedo_info>
+	torpedo_loading(std::shared_ptr<torpedo_info> torpedo) noexcept;
 
 private:
 	mutable sf::Text text;
@@ -181,27 +183,30 @@ private:
 	float delay;
 
 	uint32_t range = 5;
-	std::shared_ptr<weapon::torpedo_info> torpedo_info_ptr = nullptr;
+	std::shared_ptr<torpedo_info> torpedo_info_ptr = nullptr;
 };
 
-class weapon::torpedo_info{
+class torpedo_info{
 public:
 	virtual void create_projectile(game_info *info, mech* owner,
-		std::list<uint32_t> path, uint32_t target_cell) const = 0;
-	virtual std::list<uint32_t> get_damage_zone(uint32_t target_cell,
-		game_info *info, client *client) const = 0;
+		std::list<uint32_t> path, uint32_t target_cell,
+		std::shared_ptr<torpedo_info> torpedo_info_ptr) const = 0;
+	virtual area get_damage_zone(game_info *info, uint32_t target_cell) const = 0;
+	virtual void detonate(game_info *info, uint32_t target_cell) const = 0;
 private:
 
 };
 
-class explosive_torpedo : public weapon::torpedo_info{
+class explosive_torpedo : public torpedo_info{
 public:
 	void create_projectile(game_info *info, mech* owner,
-		std::list<uint32_t> path, uint32_t target_cell) const override;
-	std::list<uint32_t> get_damage_zone(uint32_t target_cell,
-		game_info *info, client *client) const override;
+		std::list<uint32_t> path, uint32_t target_cell,
+		std::shared_ptr<torpedo_info> torpedo_info_ptr) const override;
+	area get_damage_zone(game_info *info, uint32_t target_cell) const override;
+	void detonate(game_info *info, uint32_t target_cell) const override;
 private:
 	uint32_t aoe = 1;
+	std::vector<float> damage{80, 40};
 };
 
 class legs : public item, public turn_on{

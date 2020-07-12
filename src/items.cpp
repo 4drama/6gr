@@ -115,7 +115,8 @@ void weapon::use(game_info *info, mech* owner, uint32_t target_cell){
 			get_path(info, owner->cell_index, target_cell, this->range);
 
 		curr_delay = 0;
-		this->torpedo_info_ptr->create_projectile(info, owner, path, target_cell);
+		this->torpedo_info_ptr->create_projectile(info, owner, path,
+			target_cell, this->torpedo_info_ptr);
 		this->torpedo_info_ptr = nullptr;
 	}
 }
@@ -151,16 +152,29 @@ void weapon::update(mech* owner, float time){
 }
 
 void explosive_torpedo::create_projectile(game_info *info, mech* owner,
-	std::list<uint32_t> path, uint32_t target_cell) const{
+	std::list<uint32_t> path, uint32_t target_cell,
+	std::shared_ptr<torpedo_info> torpedo_info_ptr) const{
 
-	info->add_projectile(
-		std::make_shared<projectile>(info, path, owner->cell_index, this->aoe));
+	info->add_projectile( std::make_shared<projectile>(info, path, owner->cell_index,
+		this->aoe, torpedo_info_ptr));
 }
 
-std::list<uint32_t> explosive_torpedo::get_damage_zone(uint32_t target_cell,
-	game_info *info, client *client) const {
+area explosive_torpedo::get_damage_zone(game_info *info, uint32_t target_cell) const {
+	return area(info, target_cell, this->aoe);
+}
 
-	return get_area(info, target_cell, this->aoe);
+void explosive_torpedo::detonate(game_info *info, uint32_t target_cell) const {
+	area area = this->get_damage_zone(info, target_cell);
+
+	assert(this->aoe + 1 == this->damage.size());
+	for(uint32_t i = 0; i < this->damage.size(); ++i){
+		for(const auto& cell_index : area.get_level(i)){
+			auto &unit = info->get_cell(cell_index).unit;
+			if(unit){
+				unit->damage(this->damage[i]);
+			}
+		}
+	}
 }
 
 void weapon::load_sprites(){
@@ -281,10 +295,11 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 		}
 	}
 
-	std::list<uint32_t> area = get_area(info, mech_cell_position, this->range);
-	std::list<uint32_t> aoe = torpedo_info_ptr->get_damage_zone(path.back(), info, client);
+	std::list<uint32_t> aoe =
+		torpedo_info_ptr->get_damage_zone(info, path.back()).combine();
+	std::list<uint32_t> area = ::area(info, mech_cell_position, this->range).combine();
 
-	for(uint32_t &cell_index : area){
+	for(const uint32_t &cell_index : area){
 		client->fill_color_cell(info, cell_index,
 			sf::Color(255, 255, 255, 30));
 	}
@@ -300,8 +315,8 @@ void weapon::draw_active_zone(uint32_t mech_cell_position, game_info *info, clie
 	}
 }
 
-std::shared_ptr<weapon::torpedo_info>
-weapon::torpedo_loading(std::shared_ptr<weapon::torpedo_info> torpedo) noexcept{
+std::shared_ptr<torpedo_info>
+weapon::torpedo_loading(std::shared_ptr<torpedo_info> torpedo) noexcept{
 	auto tmp_torpedo = this->torpedo_info_ptr;
 	this->torpedo_info_ptr = torpedo;
 	this->curr_delay = 0;

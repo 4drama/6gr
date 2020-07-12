@@ -242,7 +242,17 @@ std::vector<uint32_t> open_adjacent(game_info *info, uint32_t player_index,
 std::list<uint32_t> get_path(game_info *info,
 	uint32_t start_cell_index, uint32_t target_cell_index, uint32_t depth);
 
-std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t depth,
-	bool is_root = true, cardinal_directions_t main_dir = cardinal_directions_t::BEGIN);
+/*std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t depth,
+	bool is_root = true, cardinal_directions_t main_dir = cardinal_directions_t::BEGIN);*/
+
+class area{
+public:
+	area(game_info *info, uint32_t cell_index, uint32_t depth);
+
+	const std::list<uint32_t>& get_level(uint32_t level){return cells[level];};
+	std::list<uint32_t> combine(uint32_t start_lvl = 0, uint32_t end_lvl = UINT32_MAX);
+private:
+	std::vector<std::list<uint32_t>> cells;
+};
 
 #endif

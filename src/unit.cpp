@@ -21,9 +21,9 @@ void projectile::load_sprites(){
 	sprites["torpedo"].setOrigin(41 / 2, 14 / 2);
 }
 
-projectile::projectile(game_info *info, std::list<uint32_t> path_,
-	uint32_t cell_index_, uint32_t aoe_)
-	: path(path_), start_cell_index(path_.front()),
+projectile::projectile(game_info *info, std::list<uint32_t> path_, uint32_t cell_index_,
+	uint32_t aoe_, std::shared_ptr<torpedo_info> torpedo_info_ptr_)
+	: torpedo_info_ptr(torpedo_info_ptr_), path(path_), start_cell_index(path_.front()),
 	cell_index(cell_index_), aoe(aoe_), length(path_.size() - 0.5f){
 	this->path.pop_front();
 	if(projectile::sprites.empty())
@@ -80,6 +80,10 @@ void projectile::draw(game_info *info, client *client) const noexcept{
 
 		client->get_window().draw(torpedo);
 	}
+}
+
+void projectile::detonate(game_info *info) const {
+	torpedo_info_ptr->detonate(info, this->cell_index);
 }
 
 void unit::update_path(game_info *info, uint32_t player_index, uint32_t target_cell){
@@ -455,6 +459,14 @@ bool mech::event(sf::Event event, game_info *info, uint32_t player_index,
 		}
 	}
 	return false;
+}
+
+bool mech::damage(float damage) noexcept{
+	std::array<part_of_mech*, 3> parts{&this->left_arm, &this->torso, &this->right_arm};
+
+	for(auto &part : parts){
+		part->durability -= part->durability > damage ? damage : part->durability;
+	}
 }
 
 mech_status mech::accumulate_status() const noexcept{

@@ -1119,12 +1119,10 @@ void game_info::update(float time){
 		const std::shared_ptr<projectile>& projectile_ptr = *it;
 		projectile_ptr->update(this, time);
 		if(projectile_ptr->is_explosion()){
-			std::list<uint32_t> area = get_area(this, projectile_ptr->get_cell_index(),
-				projectile_ptr->get_aoe());
+		/*	std::list<uint32_t> area = get_area(this, projectile_ptr->get_cell_index(),
+				projectile_ptr->get_aoe());*/
+			projectile_ptr->detonate(this);
 			it = --projectiles.erase(it);
-
-			// TO DO: explosion
-			std::cerr << "BABAH" << std::endl;
 		}
 	}
 
@@ -1199,7 +1197,7 @@ std::list<uint32_t> get_path(game_info *info,
 	return path;
 }
 
-std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t depth,
+/*std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t depth,
 	bool is_root, cardinal_directions_t main_dir){
 	using cd_t = cardinal_directions_t;
 
@@ -1219,6 +1217,54 @@ std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t dept
 
 	res.sort();
 	res.unique();
+	return res;
+}*/
+
+namespace{
+
+get_area_f(std::vector<std::list<uint32_t>> &cells, game_info *info,
+	uint32_t cell_index, uint32_t depth){
+	using cd_t = cardinal_directions_t;
+
+	cells = std::vector<std::list<uint32_t>>(depth + 1);
+	cells[0].emplace_back(cell_index);
+
+	for(cd_t dir = cd_t::BEGIN; dir != cd_t::END ; dir = (cd_t)((int)dir + 1)){
+		uint32_t current_cell = cell_index;
+		if(current_cell == UINT32_MAX){
+			continue;
+		}
+		for(uint32_t current_depth = 1; current_depth < depth + 1; ++current_depth){
+			current_cell = info->get_cell(current_cell).indeces[(int)dir];
+			if(current_cell == UINT32_MAX){
+				break;
+			}
+			cells[current_depth].emplace_back(current_cell);
+
+			uint32_t l_cell = info->get_cell(current_cell).indeces[(int)previous(dir)];
+			for(uint32_t i = current_depth; i < depth; ++i){
+				if(l_cell == UINT32_MAX){
+					break;
+				}
+				cells[i + 1].emplace_back(l_cell);
+				l_cell = info->get_cell(l_cell).indeces[(int)previous(dir)];
+			}
+		}
+	}
+}
+
+}
+
+area::area(game_info *info, uint32_t cell_index, uint32_t depth){
+	get_area_f(this->cells, info, cell_index, depth);
+}
+
+std::list<uint32_t> area::combine(uint32_t start_lvl, uint32_t end_lvl){
+	std::list<uint32_t> res{};
+	end_lvl = end_lvl != UINT32_MAX ? end_lvl : this->cells.size();
+	for(uint32_t i = start_lvl; i < end_lvl; ++i){
+		res.insert(res.end(), this->cells[i].begin(), this->cells[i].end());
+	}
 	return res;
 }
 
