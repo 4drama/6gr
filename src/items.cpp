@@ -89,8 +89,8 @@ item_shape turn_on::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
-weapon::weapon(std::string name, float delay_)
-	: item(name, 10, 3), delay(delay_ / 10000), text(name, get_font(), 22),
+weapon::weapon(const part_of_mech *part_ptr, std::string name, float delay_)
+	: item(part_ptr, name, 10, 3), delay(delay_ / 10000), text(name, get_font(), 22),
 	shot_energy(-25), shot_heat(40), delay_energy(-5){
 	if(weapon::sprites.empty())
 		weapon::load_sprites();
@@ -123,14 +123,15 @@ void weapon::use(game_info *info, mech* owner, uint32_t target_cell){
 
 bool weapon::get_ready(const mech* owner) const noexcept{
 	bool status = false;
-	if(this->get_power_status() && (this->get_delay() >= 1) && this->has_resources(owner)){
+	if(this->get_power_status() && (this->get_delay() >= 1) &&
+		this->has_resources(owner) && this->is_working()){
 		status = true;
 	}
 	return status;
 }
 
 void weapon::update(mech* owner, float time){
-	if(this->get_power_status()){
+	if(this->get_power_status() && this->is_working()){
 		if(!torpedo_info_ptr){
 			owner->try_loading_torpedo(this);
 		}
@@ -265,8 +266,13 @@ void weapon::load_sprites(){
 	sprites["progress_bar_reload_ready"].setPosition(22, -27);
 }
 
-item::item(std::string name_, float weight_, uint32_t slots_)
-	: name(name_), weight(weight_), slots(slots_){
+item::item(const part_of_mech *part_ptr_, std::string name_, float weight_, uint32_t slots_)
+	: name(name_), weight(weight_), slots(slots_), part_ptr(part_ptr_){
+}
+
+bool item::is_working() const noexcept{
+	assert(this->part_ptr);
+	return this->part_ptr->durability > 0 ? true : false;
 }
 
 item_shape weapon::get_draw_shape(const mech* owner, client *client,
@@ -439,8 +445,8 @@ void engine::load_sprites(){
 	engine::sprites["threshold_plus"].setPosition(17 + 35 + 2 + 35 + 2 + 86 + 2, 0);
 };
 
-engine::engine(std::string name, int threshold_ = 0)
-	: item(name, 30, 5), performance{60.0f, 60.0f, 0.3f},
+engine::engine(const part_of_mech *part_ptr, std::string name, int threshold_ = 0)
+	: item(part_ptr, name, 30, 5), performance{60.0f, 60.0f, 0.3f},
 		threshold(threshold_),
 		threshold_text(std::string("threshold"), get_font(), 20),
 		threshold_value_text(std::to_string(threshold_), get_font(), 21){
@@ -504,8 +510,8 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
-legs::legs(std::string name)
-	: item(name, 20, 5), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
+legs::legs(const part_of_mech *part_ptr, std::string name)
+	: item(part_ptr, name, 20, 5), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
 
 	if(legs::sprites.empty())
 		legs::load_sprites();
@@ -572,9 +578,9 @@ void cooling_system::load_sprites(){
 	cooling_system::sprites["picture"].setPosition(17, 0);
 }
 
-cooling_system::cooling_system(
+cooling_system::cooling_system(const part_of_mech *part_ptr,
 	std::string name_, float heat_efficiency_, float energy_consumption_)
-	: item(name_, 5, 2), heat_efficiency(heat_efficiency_),
+	: item(part_ptr, name_, 5, 2), heat_efficiency(heat_efficiency_),
 	energy_consumption(energy_consumption_){
 	if(cooling_system::sprites.empty())
 		cooling_system::load_sprites();
@@ -603,24 +609,24 @@ item_shape cooling_system::get_draw_shape(const mech* owner, client *client,
 
 }
 
-accumulator::accumulator(std::string name, float capacity_)
-	: item(name, 5, 2), capacity(capacity_){
+accumulator::accumulator(const part_of_mech *part_ptr, std::string name, float capacity_)
+	: item(part_ptr, name, 5, 2), capacity(capacity_){
 };
 
 mech_status accumulator::get() const noexcept{
 	return mech_status::capacity(this->capacity, 0, 0);
 }
 
-radiator::radiator(std::string name, float capacity_)
-	: item(name, 5, 2), capacity(capacity_){
+radiator::radiator(const part_of_mech *part_ptr, std::string name, float capacity_)
+	: item(part_ptr, name, 5, 2), capacity(capacity_){
 };
 
 mech_status radiator::get() const noexcept{
 	return mech_status::capacity(0, this->capacity, 0);
 }
 
-tank::tank(std::string name, float capacity_)
-	: item(name, 5, 2), capacity(capacity_){
+tank::tank(const part_of_mech *part_ptr, std::string name, float capacity_)
+	: item(part_ptr, name, 5, 2), capacity(capacity_){
 };
 
 mech_status tank::get() const noexcept{

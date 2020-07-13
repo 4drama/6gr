@@ -152,20 +152,20 @@ mech::mech(uint32_t cell_index_)
 		create_sprite_f(&unit::textures[filename],
 		60, 60, 0, 0));
 
-	this->left_arm.add_item(std::make_shared<weapon>("Rocket", 15000));
-	this->left_arm.add_item(std::make_shared<radiator>("Radiator", 75));
-	this->left_arm.add_item(std::make_shared<accumulator>("Accumulator", 50));
+	this->left_arm.add_item(std::make_shared<weapon>(&this->left_arm, "Rocket", 15000));
+	this->left_arm.add_item(std::make_shared<radiator>(&this->left_arm, "Radiator", 75));
+	this->left_arm.add_item(std::make_shared<accumulator>(&this->left_arm, "Accumulator", 50));
 
-	this->right_arm.add_item(std::make_shared<weapon>("Rocket", 15000));
-	this->right_arm.add_item(std::make_shared<radiator>("Radiator", 75));
-	this->right_arm.add_item(std::make_shared<accumulator>("Accumulator", 50));
+	this->right_arm.add_item(std::make_shared<weapon>(&this->right_arm, "Rocket", 15000));
+	this->right_arm.add_item(std::make_shared<radiator>(&this->right_arm, "Radiator", 75));
+	this->right_arm.add_item(std::make_shared<accumulator>(&this->right_arm, "Accumulator", 50));
 
-	this->torso.add_item(std::make_shared<legs>("Legs"));
-	this->torso.add_item(std::make_shared<engine>("Engine", 70));
-	this->torso.add_item(std::make_shared<tank>("Tank", 20));
-	this->torso.add_item(std::make_shared<radiator>("Radiator", 200));
-	this->torso.add_item(std::make_shared<accumulator>("Accumulator", 100));
-	this->torso.add_item(std::make_shared<cooling_system>("Cooling system", 10.0f, 1.25f));
+	this->torso.add_item(std::make_shared<legs>(&this->torso, "Legs"));
+	this->torso.add_item(std::make_shared<engine>(&this->torso, "Engine", 70));
+	this->torso.add_item(std::make_shared<tank>(&this->torso, "Tank", 20));
+	this->torso.add_item(std::make_shared<radiator>(&this->torso, "Radiator", 200));
+	this->torso.add_item(std::make_shared<accumulator>(&this->torso, "Accumulator", 100));
+	this->torso.add_item(std::make_shared<cooling_system>(&this->torso, "Cooling system", 10.0f, 1.25f));
 
 	this->refresh();
 	this->calculate_status(mech_status::current(0, 0, 20));
@@ -471,8 +471,19 @@ bool mech::damage(const damage_info &damage) noexcept{
 
 	for(auto &part : parts){
 		auto res = damage.get(part.first);
+		float capacity_left = part.second->status.heat_capacity -
+			part.second->status.current_heat;
+		float add_heat = capacity_left > res.heat ?
+			res.heat : capacity_left;
+
+		part.second->status.current_heat += add_heat;
+
+		if(add_heat < res.heat){
+			res.damage += res.heat - add_heat;
+		}
 		part.second->durability -= part.second->durability > res.damage ?
 			res.damage : part.second->durability;
+
 	}
 }
 

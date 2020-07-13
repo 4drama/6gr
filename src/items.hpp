@@ -12,6 +12,7 @@
 
 struct mech_status;
 class mech;
+class part_of_mech;
 
 class area;
 
@@ -129,20 +130,22 @@ public:
 
 class item : public virtual item_base, std::enable_shared_from_this<item>{
 public:
-	item(std::string name, float weight, uint32_t slots);
+	item(const part_of_mech *part_ptr, std::string name, float weight, uint32_t slots);
 
 	inline const std::string& get_name() const noexcept{ return this->name;};
 	inline virtual void update(mech* owner, float time){};
 
 	inline float get_weight() const noexcept {return this->weight;};
 	inline uint32_t get_slots() const noexcept {return this->slots;};
+
+	bool is_working() const noexcept;
 private:
 	std::string name;
 
 	float weight = 0;
 	uint32_t slots = 0;
 
-//	const *part_of_mech;
+	const part_of_mech *part_ptr = nullptr;
 };
 
 class torpedo_info;
@@ -158,7 +161,7 @@ public:
 
 	inline weapon* is_weapon() noexcept override {return this;};
 
-	weapon(std::string name, float delay);
+	weapon(const part_of_mech *part_ptr, std::string name, float delay);
 	void update(mech* owner, float time) override;
 
 	bool has_resources(const mech* owner) const noexcept;
@@ -246,7 +249,7 @@ class legs : public item, public turn_on{
 
 	static void load_sprites();
 public:
-	legs(std::string name);
+	legs(const part_of_mech *part_ptr, std::string name);
 	inline legs* is_legs() noexcept override {	return this;};
 
 	inline float get_speed(terrain_en ter_type) const noexcept{
@@ -282,7 +285,7 @@ class engine : public item, public change_mech_status, public turn_on{
 
 	static void load_sprites();
 public:
-	engine(std::string name, int threshold);
+	engine(const part_of_mech *part_ptr, std::string name, int threshold);
 	inline engine* is_engine() noexcept override {return this;};
 
 	mech_status get_mech_changes(float time, const mech_status &status) const noexcept override;
@@ -316,7 +319,7 @@ class cooling_system : public item, public change_mech_status, public turn_on {
 
 	static void load_sprites();
 public:
-	cooling_system(std::string name, float heat_efficiency, float energy_consumption);
+	cooling_system(const part_of_mech *part_ptr, std::string name, float heat_efficiency, float energy_consumption);
 	mech_status get_mech_changes(float time, const mech_status &status) const noexcept override;
 	item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position) override;
@@ -327,7 +330,7 @@ private:
 
 class accumulator : public item, public capacity_change{
 public:
-	accumulator(std::string name, float capacity_);
+	accumulator(const part_of_mech *part_ptr, std::string name, float capacity_);
 	mech_status get() const noexcept;
 private:
 	float capacity = 0;
@@ -335,7 +338,7 @@ private:
 
 class radiator : public item, public capacity_change{
 public:
-	radiator(std::string name, float capacity_);
+	radiator(const part_of_mech *part_ptr, std::string name, float capacity_);
 	mech_status get() const noexcept;
 private:
 	float capacity = 0;
@@ -343,7 +346,7 @@ private:
 
 class tank : public item, public capacity_change{
 public:
-	tank(std::string name, float capacity_);
+	tank(const part_of_mech *part_ptr, std::string name, float capacity_);
 	mech_status get() const noexcept;
 private:
 	float capacity = 0;
