@@ -461,11 +461,18 @@ bool mech::event(sf::Event event, game_info *info, uint32_t player_index,
 	return false;
 }
 
-bool mech::damage(float damage) noexcept{
-	std::array<part_of_mech*, 3> parts{&this->left_arm, &this->torso, &this->right_arm};
+bool mech::damage(const damage_info &damage) noexcept{
+	using part_t = damage_info::part_t;
+	std::array<std::pair<part_t, part_of_mech*>, (int)part_t::SIZE> parts;
+
+	parts[(int)part_t::TORSO] = std::make_pair(part_t::TORSO, &this->torso);
+	parts[(int)part_t::LEFT_ARM] = std::make_pair(part_t::LEFT_ARM, &this->left_arm);
+	parts[(int)part_t::RIGHT_ARM] = std::make_pair(part_t::RIGHT_ARM, &this->right_arm);
 
 	for(auto &part : parts){
-		part->durability -= part->durability > damage ? damage : part->durability;
+		auto res = damage.get(part.first);
+		part.second->durability -= part.second->durability > res.damage ?
+			res.damage : part.second->durability;
 	}
 }
 

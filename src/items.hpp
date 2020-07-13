@@ -141,6 +141,8 @@ private:
 
 	float weight = 0;
 	uint32_t slots = 0;
+
+//	const *part_of_mech;
 };
 
 class torpedo_info;
@@ -197,8 +199,37 @@ private:
 
 };
 
+class damage_info{
+public:
+	enum class part_t{
+		TORSO = 0,
+		LEFT_ARM = 1,
+		RIGHT_ARM = 2,
+
+		SIZE = 3
+	};
+
+	struct damage_t{
+		float damage;
+		float heat;
+	};
+
+	struct damage_to_part_t{
+		int chance = 100;
+		std::pair<float, float> damage;
+		std::pair<float, float> heat;
+	};
+
+	damage_info(std::map<part_t, damage_to_part_t> damages);
+	damage_t get(part_t part) const noexcept;
+
+private:
+	std::map<part_t, damage_to_part_t> damages;
+};
+
 class explosive_torpedo : public torpedo_info{
 public:
+	explosive_torpedo();
 	void create_projectile(game_info *info, mech* owner,
 		std::list<uint32_t> path, uint32_t target_cell,
 		std::shared_ptr<torpedo_info> torpedo_info_ptr) const override;
@@ -206,7 +237,7 @@ public:
 	void detonate(game_info *info, uint32_t target_cell) const override;
 private:
 	uint32_t aoe = 1;
-	std::vector<float> damage{80, 40};
+	std::vector<damage_info> damage;
 };
 
 class legs : public item, public turn_on{

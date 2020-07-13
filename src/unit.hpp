@@ -18,6 +18,7 @@ class legs;
 class engine;
 class weapon;
 class torpedo_info;
+struct damage_info;
 
 class projectile{
 	static sf::Texture texture;
@@ -82,7 +83,7 @@ struct unit : std::enable_shared_from_this<unit>{
 	virtual bool event(sf::Event event, game_info *info,
 		uint32_t player_index, uint32_t target_cell) noexcept;
 
-	virtual bool damage(float damage) noexcept {return false;};
+	virtual bool damage(const damage_info &damage) noexcept {return false;};
 
 private:
 	void unit_update_move(game_info *info, uint32_t player_index, float time);
@@ -187,7 +188,7 @@ public:
 	bool event(sf::Event event, game_info *info,
 		uint32_t player_index, uint32_t target_cell) noexcept override;
 
-	bool damage(float damage) noexcept override;
+	bool damage(const damage_info &damage) noexcept override;
 
 	float get_available_rate(mech_status necessary) const noexcept;
 

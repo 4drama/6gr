@@ -151,6 +151,54 @@ void weapon::update(mech* owner, float time){
 	}
 }
 
+damage_info::damage_info(std::map<part_t, damage_to_part_t> damages_)
+	: damages(damages_){
+}
+
+damage_info::damage_t damage_info::get(damage_info::part_t part) const noexcept{
+	try{
+		const damage_info::damage_to_part_t& damage_part = this->damages.at(part);
+		const float accuracy = (float)(std::rand() % 100) / 100.f;
+
+		return (std::rand() % 100) < damage_part.chance ?
+		damage_info::damage_t{
+			damage_part.damage.first + accuracy * damage_part.damage.second,
+			damage_part.heat.first + accuracy * damage_part.heat.second} :
+			damage_info::damage_t{0, 0};
+
+	} catch(const std::exception& e){
+		std::cerr << "damage_info::get(part_t part) part not found." << std::endl;
+		return damage_info::damage_t{0, 0};
+	}
+}
+
+namespace{
+
+damage_info create_explosive_torpedo_damage_f(float min_damage, float max_damage,
+	float min_heat, float max_heat){
+	using part_t = damage_info::part_t;
+	using damage_t = damage_info::damage_t;
+	using damage_to_part_t = damage_info::damage_to_part_t;
+	std::map<part_t, damage_to_part_t> damages{};
+	damages[part_t::TORSO] = damage_to_part_t{
+		100, {min_damage, max_damage - min_damage},
+		{min_heat, max_heat - min_heat}};
+	damages[part_t::LEFT_ARM] = damage_to_part_t{
+		100, {min_damage, max_damage - min_damage},
+		{min_heat, max_heat - min_heat}};
+	damages[part_t::RIGHT_ARM] = damage_to_part_t{
+		100, {min_damage, max_damage - min_damage},
+		{min_heat, max_heat - min_heat}};
+	return damage_info(damages);
+}
+
+}
+
+explosive_torpedo::explosive_torpedo(){
+	damage.emplace_back(create_explosive_torpedo_damage_f(30, 150, 10, 75));
+	damage.emplace_back(create_explosive_torpedo_damage_f(15, 75, 5, 32.5f));
+}
+
 void explosive_torpedo::create_projectile(game_info *info, mech* owner,
 	std::list<uint32_t> path, uint32_t target_cell,
 	std::shared_ptr<torpedo_info> torpedo_info_ptr) const{
