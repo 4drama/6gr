@@ -19,6 +19,16 @@ bool is_inside(bounds_type bounds, sf::Vector2f pos);
 
 class item_shape;
 
+template<typename T>
+class deferred_deletion_container{
+public:
+	void add_pointer(std::shared_ptr<T> ptr);
+	void update();
+private:
+	std::list<std::shared_ptr<T>> pointers;
+	std::list<std::shared_ptr<T>> to_dell;
+};
+
 class client{
 public:
 	client(game_info *info, int width_, int height_, uint32_t player_index);
@@ -96,6 +106,8 @@ private:
 	std::list<game_window> game_windows;
 	bool windows_interact(sf::Event event);
 	std::vector<bool> vision_map;
+
+	deferred_deletion_container<sf::Text> text_delete_contaier;
 };
 
 sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexcept;
@@ -123,5 +135,24 @@ template<typename drawable_type>
 void client::prepare_to_draw(drawable_type& object) const noexcept{
 	object.setPosition(this->perspective(object.getPosition()));
 };
+
+template<typename T>
+void deferred_deletion_container<T>::update(){
+	to_dell.clear();
+
+	for(auto it = pointers.begin(); it != pointers.end();){
+		if(it->use_count() == 1){
+			to_dell.emplace_back(*it);
+			it = pointers.erase(it);
+		} else {
+			++it;
+		}
+	}
+}
+
+template<typename T>
+void deferred_deletion_container<T>::add_pointer(std::shared_ptr<T> ptr){
+	pointers.emplace_back(ptr);
+}
 
 #endif

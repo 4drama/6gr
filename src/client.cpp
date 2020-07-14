@@ -24,8 +24,8 @@ client::client(game_info *info, int width_, int height_, uint32_t player_index)
 
 	player_respawn(info, this);
 
-	game_windows.emplace_back(sf::Vector2f(50, 50), sf::Vector2f(100, 100));
-	game_windows.emplace_back(sf::Vector2f(100, 100), sf::Vector2f(100, 100));
+	game_windows.emplace_back(&this->text_delete_contaier,
+		"Title", sf::Vector2f(50, 50), sf::Vector2f(100, 100));
 }
 
 float client::get_view_scale() const{
@@ -271,8 +271,6 @@ void client::draw(game_info *info, float time){
 		}
 
 		for(auto &projectile_ptr : info->projectiles){
-		/*	this->fill_color_cell(info, projectile_ptr->get_cell_index(),
-				sf::Color(255, 0, 0));*/
 			projectile_ptr->draw(info, this);
 		}
 
@@ -284,8 +282,8 @@ void client::draw(game_info *info, float time){
 			win.draw(&window, this->get_view_scale());
 		}
 
-
 		this->window.display();
+		this->text_delete_contaier.update();
 	}
 }
 

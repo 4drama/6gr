@@ -7,7 +7,14 @@
 #include <functional>
 #include <memory>
 
+template<typename T>
+class deferred_deletion_container;
+
 class game_window;
+
+std::shared_ptr<sf::Text> create_text(
+	deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const sf::String &string, const sf::Font &font, unsigned int characterSize = 20);
 
 class widget{
 public:
@@ -36,7 +43,8 @@ private:
 
 class header_bar : public widget{
 public:
-	header_bar(std::map<std::string, sf::Sprite> *sprites, float length);
+	header_bar(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		std::string title, std::map<std::string, sf::Sprite> *sprites, float length);
 
 	void update(game_window *win) noexcept override;
 	bool interact(game_window *win, sf::Vector2f position, sf::Event event) override;
@@ -44,10 +52,10 @@ public:
 
 	inline void change_length(float length) noexcept {this->size.x = length;};
 private:
-	sf::Vector2f size;
+	std::shared_ptr<sf::Text> title_ptr;
 
+	sf::Vector2f size;
 	sf::RectangleShape main_zone;
-//	std::function<void()> drag_and_drop;
 
 	bool is_move = false;
 	sf::Vector2f old_move_position;
@@ -79,7 +87,8 @@ class game_window{
 
 	static void load_sprites();
 public:
-	game_window(sf::Vector2f position, sf::Vector2f size,
+	game_window(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		std::string title, sf::Vector2f position, sf::Vector2f size,
 		sf::Color color = sf::Color(167, 167, 167));
 	void draw(sf::RenderWindow *window, float scale);
 	bool interact(sf::Vector2f pos, sf::Event event);

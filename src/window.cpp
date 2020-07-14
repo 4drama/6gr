@@ -34,11 +34,19 @@ void exit_button::draw(sf::RenderWindow *window){
 	window->draw(sprite);
 }
 
-header_bar::header_bar(std::map<std::string, sf::Sprite> *sprites_, float length)
-	: widget(sf::Vector2f(0, 0), sprites_), size(length, 23.0f),
+header_bar::header_bar(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	std::string title_, std::map<std::string, sf::Sprite> *sprites_, float length)
+	: widget(sf::Vector2f(0, 0), sprites_),
+	title_ptr(create_text(text_delete_contaier, title_, get_font(), 20)), size(length, 23.0f),
 	main_zone(this->size), exit_button_m(sprites_){
 	main_zone.setPosition(this->position);
 	main_zone.setFillColor(sf::Color(67, 67, 67));
+
+	title_ptr->setFillColor(sf::Color(167, 167, 167));
+	title_ptr->setOutlineColor(sf::Color(36, 36, 36));
+	title_ptr->setOutlineThickness(1);
+
+	text_delete_contaier->add_pointer(this->title_ptr);
 }
 
 void header_bar::update(game_window *win) noexcept{
@@ -49,6 +57,10 @@ void header_bar::update(game_window *win) noexcept{
 
 	this->main_zone.setSize(this->size * win->get_scale());
 	this->main_zone.setPosition((this->position + win->get_position()) * win->get_scale());
+
+	title_ptr->setScale(win->get_scale(), -win->get_scale());
+	title_ptr->setPosition((this->position + sf::Vector2f{3, 25} + win->get_position())
+		* win->get_scale());
 
 	auto create_sprite = [&win](const sf::Sprite &sprite,
 		sf::Vector2f scale = sf::Vector2f(1.0f, -1.0f),
@@ -113,6 +125,7 @@ void header_bar::draw(sf::RenderWindow *window){
 		window->draw(sprite);
 	}
 	this->exit_button_m.draw(window);
+	window->draw(*title_ptr);
 }
 
 window::window(std::map<std::string, sf::Sprite> *sprites_, sf::Vector2f size_)
@@ -231,13 +244,16 @@ void game_window::load_sprites(){
 	sprites["window_right_down_corner"].setPosition(-3, 3);
 }
 
-game_window::game_window(sf::Vector2f position_, sf::Vector2f size_, sf::Color color)
+game_window::game_window(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	std::string title, sf::Vector2f position_,
+	sf::Vector2f size_, sf::Color color)
 	: position(position_), size(size_.x, -size_.y){
 	if(game_window::sprites.empty())
 		game_window::load_sprites();
 
 	widgets.emplace_back(std::make_shared<window>(&game_window::sprites, this->size));
-	widgets.emplace_back(std::make_shared<header_bar>(&game_window::sprites, this->size.x));
+	widgets.emplace_back(std::make_shared<header_bar>
+		(text_delete_contaier, title, &game_window::sprites, this->size.x));
 }
 
 bool game_window::interact(sf::Vector2f pos, sf::Event event){
@@ -255,4 +271,13 @@ void game_window::draw(sf::RenderWindow *window, float scale){
 		widget->draw(window);
 	}
 
+}
+
+std::shared_ptr<sf::Text> create_text(
+	deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const sf::String &string, const sf::Font &font, unsigned int characterSize){
+	std::shared_ptr<sf::Text> res =
+		std::make_shared<sf::Text>(string, font, characterSize);
+	text_delete_contaier->add_pointer(res);
+	return res;
 }
