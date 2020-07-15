@@ -432,7 +432,7 @@ item_shape mech::prepare_gui_shape(client *client){
 	}
 
 	::item_shape gui_shape{};
-	if(this->layout_window){
+	if(this->layout_window.use_count()){
 		gui_shape.elements.emplace_back(mech::sprites["window_layout_close"],
 			std::function<void()>());
 	} else {
@@ -469,8 +469,8 @@ void mech::draw_gui(game_info *info, client *client){
 		item_draw_ptr->draw_active_zone(this->cell_index, info, client);
 	}
 
-	if(this->layout_window.use_count() == 1){
-		this->layout_window = nullptr;
+	if(this->layout_window.use_count() == 0){
+		this->layout_window.reset();
 	}
 
 	::item_shape gui_shape = this->prepare_gui_shape(client);

@@ -203,7 +203,7 @@ public:
 	bool try_spend(const mech_status &status) noexcept;
 	bool try_loading_torpedo(weapon* weapon_ptr);
 private:
-	std::shared_ptr<game_window> layout_window;
+	std::weak_ptr<game_window> layout_window;
 	item *waiting_confirm = nullptr;
 
 	mutable sf::Text energy_text;
