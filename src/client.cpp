@@ -24,8 +24,15 @@ client::client(game_info *info, int width_, int height_, uint32_t player_index)
 
 	player_respawn(info, this);
 
-	game_windows.emplace_back(&this->text_delete_contaier,
+/*	game_windows.emplace_back(std::make_shared<game_window>(&this->text_delete_contaier,
+		"Title", sf::Vector2f(50, 50), sf::Vector2f(100, 100)));*/
+}
+
+std::shared_ptr<game_window> client::create_window(){
+	auto win = std::make_shared<game_window>(&this->text_delete_contaier,
 		"Title", sf::Vector2f(50, 50), sf::Vector2f(100, 100));
+	game_windows.emplace_back(win);
+	return win;
 }
 
 float client::get_view_scale() const{
@@ -279,7 +286,7 @@ void client::draw(game_info *info, float time){
 		}
 
 		for(auto &win : this->game_windows){
-			win.draw(&window, this->get_view_scale());
+			win->draw(&window, this->get_view_scale());
 		}
 
 		this->window.display();
@@ -444,8 +451,8 @@ sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexc
 
 bool client::windows_interact(sf::Event event){
 	for(auto it = this->game_windows.rbegin(); it != this->game_windows.rend(); ++it){
-		if(it->interact(this->mouse_on_map(), event)){
-			if(!it->is_close()){
+		if((*it)->interact(this->mouse_on_map(), event)){
+			if(!(*it)->is_close()){
 				this->game_windows.push_back(*it);
 			}
 			this->game_windows.erase(--it.base());

@@ -84,6 +84,8 @@ public:
 	std::vector<uint32_t> get_vision_indeces(game_info *info) const;
 	sf::Vector2f mouse_on_map() const;
 
+	std::shared_ptr<game_window> create_window();
+
 	inline void set_buttons_gui(std::vector<button> buttons){this->buttons_gui = buttons;};
 	inline const std::vector<button>& get_buttons_gui() const noexcept {return this->buttons_gui;};
 private:
@@ -103,7 +105,7 @@ private:
 
 	std::vector<button> buttons_gui;
 
-	std::list<game_window> game_windows;
+	std::list<std::shared_ptr<game_window>> game_windows;
 	bool windows_interact(sf::Event event);
 	std::vector<bool> vision_map;
 

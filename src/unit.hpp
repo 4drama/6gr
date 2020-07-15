@@ -19,6 +19,7 @@ class engine;
 class weapon;
 class torpedo_info;
 struct damage_info;
+class game_window;
 
 class projectile{
 	static sf::Texture texture;
@@ -175,6 +176,10 @@ struct part_of_mech{
 };
 
 class mech : public unit{
+	static sf::Texture texture;
+	static std::map<std::string, sf::Sprite> sprites;
+
+	static void load_sprites();
 public:
 	static inline std::shared_ptr<mech> create(uint32_t cell_index){
 		return std::make_shared<mech>(cell_index);};
@@ -198,6 +203,7 @@ public:
 	bool try_spend(const mech_status &status) noexcept;
 	bool try_loading_torpedo(weapon* weapon_ptr);
 private:
+	std::shared_ptr<game_window> layout_window;
 	item *waiting_confirm = nullptr;
 
 	mutable sf::Text energy_text;
@@ -217,6 +223,7 @@ private:
 	void update_v(game_info *info, uint32_t player_index, float time);
 
 	item_shape prepare_shape(client *client) const;
+	item_shape prepare_gui_shape(client *client);
 	void refresh();
 
 	float move_calculate(float time, terrain_en ter_type) noexcept override;

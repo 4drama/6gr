@@ -11,6 +11,9 @@ std::map<std::string, sf::Texture> unit::textures{};
 sf::Texture projectile::texture{};
 std::map<std::string, sf::Sprite> projectile::sprites{};
 
+sf::Texture mech::texture{};
+std::map<std::string, sf::Sprite> mech::sprites{};
+
 void projectile::load_sprites(){
 	projectile::texture.loadFromFile("./../data/torpedo.png");
 
@@ -135,6 +138,18 @@ unit::unit(uint32_t cell_index_, uint32_t vision_range_)
 	: cell_index(cell_index_), vision_range(vision_range_){
 }
 
+void mech::load_sprites(){
+	mech::texture.loadFromFile("./../data/mech_ui.png");
+
+	sprites["window_layout_open"] = sf::Sprite(mech::texture,
+		sf::IntRect(0, 0, 35, 40));
+	sprites["window_layout_open"].setPosition(0, 0);
+
+	sprites["window_layout_close"] = sf::Sprite(mech::texture,
+		sf::IntRect(0, 40, 35, 40));
+	sprites["window_layout_close"].setPosition(0, 0);
+}
+
 mech::mech(uint32_t cell_index_)
 	: unit(cell_index_, 4),
 	left_arm(60, 25, 7, 2.0f),
@@ -144,13 +159,16 @@ mech::mech(uint32_t cell_index_)
 	heat_text("heat_value", get_font(), 22),
 	fuel_text("fuel_text", get_font(), 22){
 
+	if(this->mech::sprites.empty()){
+		mech::load_sprites();
+	}
 	std::string path("./../data/");
 	std::string filename("mech_60x60x6.png");
 	unit::textures[filename].loadFromFile(path + filename);
 
-	this->sprites.emplace_back(
+	this->unit::sprites.emplace_back(
 		create_sprite_f(&unit::textures[filename],
-		60, 60, 0, 0));
+			60, 60, 0, 0));
 
 	this->left_arm.add_item(std::make_shared<weapon>(&this->left_arm, "Rocket", 15000));
 	this->left_arm.add_item(std::make_shared<radiator>(&this->left_arm, "Radiator", 75));
@@ -407,6 +425,39 @@ item_shape mech::prepare_shape(client *client) const{
 	return item_shape;
 }
 
+item_shape mech::prepare_gui_shape(client *client){
+	float scale = client->get_view_scale();
+	for(auto &sprite : mech::sprites){
+		sprite.second.setScale(scale, -scale);
+	}
+
+	::item_shape gui_shape{};
+	if(this->layout_window){
+		gui_shape.elements.emplace_back(mech::sprites["window_layout_close"],
+			std::function<void()>());
+	} else {
+		gui_shape.elements.emplace_back(mech::sprites["window_layout_open"],
+			[this, client](){
+				const_cast<mech*>(this)->layout_window = client->create_window();
+			});
+	}
+
+	sf::Vector2f corner = sf::Vector2f(
+		client->get_view_width(), client->get_view_height()) / 2.0f;
+
+	auto set_position = [&scale, &corner](item_button &button,
+		sf::Vector2f offset, sf::Vector2f pos){
+		button.sprite.setPosition(corner + (offset + pos) * scale);
+	};
+
+	uint32_t counter = 0;
+	for(auto &but : gui_shape.elements){
+		set_position(but, sf::Vector2f{0, 43 * counter++}, sf::Vector2f{-40, 70});
+	}
+
+	return gui_shape;
+}
+
 void mech::draw_gui(game_info *info, client *client){
 	item_shape item_shape = prepare_shape(client);
 	auto status_shape = this->get_status_shape(client, sf::Vector2f{0, 0});
@@ -417,12 +468,19 @@ void mech::draw_gui(game_info *info, client *client){
 		path_draw *item_draw_ptr = waiting_confirm->is_path_draw();
 		item_draw_ptr->draw_active_zone(this->cell_index, info, client);
 	}
+
+	if(this->layout_window.use_count() == 1){
+		this->layout_window = nullptr;
+	}
+
+	::item_shape gui_shape = this->prepare_gui_shape(client);
+	client->draw_item_shape(gui_shape);
 }
 
 bool mech::interact_gui(game_info *info, client *client){
 	float scale = client->get_view_scale();
 	sf::Vector2f pos = client->mouse_on_map();
-	item_shape shape = prepare_shape(client);
+	item_shape shape = prepare_shape(client) + prepare_gui_shape(client);
 	for(auto &but : shape.elements){
 		if(is_inside(but.sprite, pos)){
 			if(but.func){
