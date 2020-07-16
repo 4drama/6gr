@@ -84,10 +84,13 @@ public:
 	std::vector<uint32_t> get_vision_indeces(game_info *info) const;
 	sf::Vector2f mouse_on_map() const;
 
-	std::shared_ptr<game_window> create_window();
+	std::shared_ptr<game_window> create_window(std::string title, sf::Vector2f position,
+		sf::Vector2f size);
 
 	inline void set_buttons_gui(std::vector<button> buttons){this->buttons_gui = buttons;};
 	inline const std::vector<button>& get_buttons_gui() const noexcept {return this->buttons_gui;};
+	deferred_deletion_container<sf::Text> *get_delete_contaier() noexcept {
+		return &this->text_delete_contaier;};
 private:
 	int Width, Height;
 

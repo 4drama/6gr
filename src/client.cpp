@@ -28,9 +28,10 @@ client::client(game_info *info, int width_, int height_, uint32_t player_index)
 		"Title", sf::Vector2f(50, 50), sf::Vector2f(100, 100)));*/
 }
 
-std::shared_ptr<game_window> client::create_window(){
+std::shared_ptr<game_window> client::create_window(std::string title,
+	sf::Vector2f position, sf::Vector2f size){
 	auto win = std::make_shared<game_window>(&this->text_delete_contaier,
-		"Title", sf::Vector2f(50, 50), sf::Vector2f(100, 100));
+		title, position, size);
 	game_windows.emplace_back(win);
 	return win;
 }

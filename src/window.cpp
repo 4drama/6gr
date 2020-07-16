@@ -128,6 +128,47 @@ void header_bar::draw(sf::RenderWindow *window){
 	window->draw(*title_ptr);
 }
 
+content_box::content_box(std::map<std::string, sf::Sprite> *sprites_,
+	sf::Vector2f offset_, sf::Vector2f size_)
+	: widget(offset_, sprites_), size(size_), main_zone(size_){
+	main_zone.setPosition(offset_);
+}
+
+void content_box::update(game_window *win) noexcept{
+	this->scale = win->get_scale();
+	this->offset = win->get_position();
+
+	this->main_zone.setSize(this->size * this->scale);
+	this->main_zone.setPosition((this->position + win->get_position()) * this->scale);
+
+	for(auto &widget : this->widgets){
+		widget->update(this);
+	}
+}
+
+bool content_box::interact(game_window *win, sf::Vector2f pos, sf::Event event){
+	if(is_inside(main_zone, pos)){
+		for(auto &widget : this->widgets){
+			if(widget->interact(this, pos, event))
+				return true;
+		}
+	}
+	return false;
+}
+
+void content_box::draw(sf::RenderWindow *window){
+//	window->draw(main_zone);
+
+	for(auto &widget : this->widgets){
+		widget->draw(window);
+	}
+}
+
+content_box_widget::content_box_widget(sf::Vector2f position_,
+	std::map<std::string, sf::Sprite> *sprites_)
+	: sprites_ptr(sprites_), position(position_){
+}
+
 window::window(std::map<std::string, sf::Sprite> *sprites_, sf::Vector2f size_)
 	: widget(sf::Vector2f(0, 0), sprites_), size(size_.x, -size_.y), main_zone(this->size){
 	main_zone.setPosition(this->position);

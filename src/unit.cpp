@@ -425,6 +425,52 @@ item_shape mech::prepare_shape(client *client) const{
 	return item_shape;
 }
 
+namespace{
+
+class layout_item_f : public content_box_widget{
+public:
+	layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		std::map<std::string, sf::Sprite> *sprites,
+		float offset, std::shared_ptr<item> item)
+		: content_box_widget(sf::Vector2f(0, offset), sprites),
+		text(create_text(text_delete_contaier, item->get_name(), get_font(), 20)){
+	}
+
+	void update(content_box *box) noexcept override{
+		text->setScale(box->get_scale(), -box->get_scale());
+		text->setPosition((this->position + box->get_position())
+			* box->get_scale());
+	};
+
+	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
+
+	};
+
+	void draw(sf::RenderWindow *window) override{
+		window->draw(*text);
+	};
+
+private:
+	std::shared_ptr<sf::Text> text;
+};
+
+void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offset,
+	part_of_mech *part, client *client){
+	std::shared_ptr<content_box> part_widget =
+		std::make_shared<content_box>(game_window::get_sprite_ptr(),
+		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, -293});
+
+	int i = 0;
+	for(auto &item_ptr : part->items){
+		part_widget->add_widget(std::make_shared<layout_item_f>(
+			client->get_delete_contaier(), game_window::get_sprite_ptr(), i * -20, item_ptr));
+		++i;
+	}
+	window->add_widget(part_widget);
+}
+
+}
+
 item_shape mech::prepare_gui_shape(client *client){
 	float scale = client->get_view_scale();
 	for(auto &sprite : mech::sprites){
@@ -438,7 +484,19 @@ item_shape mech::prepare_gui_shape(client *client){
 	} else {
 		gui_shape.elements.emplace_back(mech::sprites["window_layout_open"],
 			[this, client](){
-				const_cast<mech*>(this)->layout_window = client->create_window();
+				auto tmp_layout_window_ptr = client->create_window("Mech layout",
+				sf::Vector2f{0, 0}, sf::Vector2f{449, 300});
+				add_mech_layout_part(
+					tmp_layout_window_ptr, sf::Vector2f{3, 0}, &this->left_arm, client);
+
+				add_mech_layout_part(
+					tmp_layout_window_ptr, sf::Vector2f{150, 0}, &this->torso, client);
+
+				add_mech_layout_part(
+					tmp_layout_window_ptr, sf::Vector2f{297, 0}, &this->right_arm, client);
+
+				const_cast<mech*>(this)->layout_window
+					= tmp_layout_window_ptr;
 			});
 	}
 

@@ -81,12 +81,55 @@ private:
 	std::vector<sf::Sprite> tmp_sprites;
 };
 
+class content_box_widget;
+
+class content_box : public widget{
+public:
+	content_box(std::map<std::string, sf::Sprite> *sprites_,
+		sf::Vector2f offset, sf::Vector2f size);
+
+	void update(game_window *win) noexcept override;
+	bool interact(game_window *win, sf::Vector2f pos, sf::Event event) override;
+	void draw(sf::RenderWindow *window) override;
+
+	inline void add_widget(std::shared_ptr<content_box_widget> widget){
+		this->widgets.emplace_back(widget);};
+
+	inline const sf::Vector2f& get_size() const noexcept{return this->size;};
+	inline sf::Vector2f get_position() const noexcept{
+		return this->position + this->offset;};
+	inline const float& get_scale() const noexcept{return this->scale;};
+private:
+	sf::Vector2f offset;
+	sf::Vector2f size;
+	float scale;
+
+	sf::RectangleShape main_zone;
+	std::list<std::shared_ptr<content_box_widget>> widgets;
+};
+
+class content_box_widget{
+public:
+	content_box_widget(sf::Vector2f position, std::map<std::string, sf::Sprite> *sprites);
+
+	virtual void update(content_box *box) noexcept = 0;
+	virtual bool interact(content_box *box, sf::Vector2f pos, sf::Event event) = 0;
+	virtual void draw(sf::RenderWindow *window) = 0;
+
+protected:
+	std::map<std::string, sf::Sprite> *sprites_ptr;
+	sf::Vector2f position;
+};
+
 class game_window{
 	static sf::Texture texture;
 	static std::map<std::string, sf::Sprite> sprites;
 
 	static void load_sprites();
 public:
+	static std::map<std::string, sf::Sprite> *get_sprite_ptr(){
+		return &game_window::sprites;};
+
 	game_window(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		std::string title, sf::Vector2f position, sf::Vector2f size,
 		sf::Color color = sf::Color(167, 167, 167));
@@ -100,6 +143,10 @@ public:
 
 	inline bool is_close() const noexcept {return this->is_close_m;};
 	inline void close() noexcept{this->is_close_m = true;};
+
+	inline void add_widget(std::shared_ptr<widget> widget){
+		this->widgets.emplace_back(widget);};
+
 private:
 	sf::Vector2f position;
 	sf::Vector2f size;
