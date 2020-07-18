@@ -427,6 +427,89 @@ item_shape mech::prepare_shape(client *client) const{
 
 namespace{
 
+class layout_part_info_f : public content_box_widget{
+	static sf::Texture texture;
+	static void load_sprites(std::map<std::string, sf::Sprite> *sprites){
+		layout_part_info_f::texture.loadFromFile("./../data/part_info.png");
+
+		(*sprites)["tonnage_symbol"] = sf::Sprite(layout_part_info_f::texture,
+			sf::IntRect(0, 0, 30, 30));
+		(*sprites)["tonnage_symbol"].setPosition(0, 0);
+
+		(*sprites)["size_symbol"] = sf::Sprite(layout_part_info_f::texture,
+			sf::IntRect(0, 30, 30, 30));
+		(*sprites)["size_symbol"].setPosition(0, 0);
+	}
+public:
+	layout_part_info_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		std::map<std::string, sf::Sprite> *sprites,
+		float offset, part_of_mech *part_)
+		: content_box_widget(sf::Vector2f(0, offset), sprites),
+		weight_text(create_text(text_delete_contaier, "weight_text", get_font(), 20)),
+		size_text(create_text(text_delete_contaier, "size_text", get_font(), 20)),
+		part(part_){
+
+		weight_text->setColor(sf::Color(36, 36, 36));
+		size_text->setColor(sf::Color(36, 36, 36));
+
+		if(sprites->find("tonnage_symbol") == sprites->end()){
+			layout_part_info_f::load_sprites(sprites);
+		}
+	}
+
+	void update(content_box *box) noexcept override{
+		weight_text->setString(std::to_string((int)part->weight) + '/' +
+			std::to_string((int)part->limits.weight));
+		size_text->setString(std::to_string(part->slots) + '/' +
+			std::to_string(part->limits.slots));
+
+		weight_text->setScale(box->get_scale(), -box->get_scale());
+		weight_text->setPosition((this->position + box->get_position() +
+			sf::Vector2f(35, 0)) * box->get_scale());
+
+		size_text->setScale(box->get_scale(), -box->get_scale());
+		size_text->setPosition((this->position + box->get_position() +
+			sf::Vector2f(35, -35)) * box->get_scale());
+
+		auto create_sprite = [&box](const sf::Sprite &sprite,
+			sf::Vector2f scale = sf::Vector2f(1.0f, -1.0f),
+			sf::Vector2f offset = sf::Vector2f(0.0f, 0.0f)){
+			sf::Sprite res_sprite = sprite;
+			res_sprite.setScale(scale * box->get_scale());
+			res_sprite.setPosition((sprite.getPosition() +
+				box->get_position() + offset) * box->get_scale());
+			return res_sprite;
+		};
+
+		tmp_sprites.clear();
+		tmp_sprites.emplace_back(create_sprite(sprites_ptr->at("tonnage_symbol"),
+			sf::Vector2f(1.0f, -1.0f), sf::Vector2f(0, 0)));
+		tmp_sprites.emplace_back(create_sprite(sprites_ptr->at("size_symbol"),
+			sf::Vector2f(1.0f, -1.0f), sf::Vector2f(0, -33)));
+	};
+
+	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
+
+	};
+
+	void draw(sf::RenderWindow *window) override{
+		window->draw(*weight_text);
+		window->draw(*size_text);
+
+		for(auto &sprite : this->tmp_sprites){
+			window->draw(sprite);
+		}
+	};
+private:
+	std::shared_ptr<sf::Text> weight_text;
+	std::shared_ptr<sf::Text> size_text;
+
+	std::vector<sf::Sprite> tmp_sprites;
+	part_of_mech *part;
+};
+
+sf::Texture layout_part_info_f::texture{};
+
 class layout_item_f : public content_box_widget{
 public:
 	layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
@@ -460,10 +543,16 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		std::make_shared<content_box>(game_window::get_sprite_ptr(),
 		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, -293});
 
+	part_widget->add_widget(std::make_shared<layout_part_info_f>(
+		client->get_delete_contaier(), game_window::get_sprite_ptr(),
+		0, part));
+
+	constexpr float info_size = -70;
 	int i = 0;
 	for(auto &item_ptr : part->items){
 		part_widget->add_widget(std::make_shared<layout_item_f>(
-			client->get_delete_contaier(), game_window::get_sprite_ptr(), i * -20, item_ptr));
+			client->get_delete_contaier(), game_window::get_sprite_ptr(),
+			info_size + i * -20, item_ptr));
 		++i;
 	}
 	window->add_widget(part_widget);
