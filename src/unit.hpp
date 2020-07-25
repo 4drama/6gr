@@ -203,6 +203,8 @@ public:
 	bool try_spend(const mech_status &status) noexcept;
 	bool try_loading_torpedo(weapon* weapon_ptr);
 private:
+	static const std::string filename;
+
 	std::weak_ptr<game_window> layout_window;
 	item *waiting_confirm = nullptr;
 

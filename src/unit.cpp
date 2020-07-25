@@ -14,6 +14,8 @@ std::map<std::string, sf::Sprite> projectile::sprites{};
 sf::Texture mech::texture{};
 std::map<std::string, sf::Sprite> mech::sprites{};
 
+const std::string mech::filename("mech_60x60x6.png");
+
 void projectile::load_sprites(){
 	projectile::texture.loadFromFile("./../data/torpedo.png");
 
@@ -163,7 +165,7 @@ mech::mech(uint32_t cell_index_)
 		mech::load_sprites();
 	}
 	std::string path("./../data/");
-	std::string filename("mech_60x60x6.png");
+//	std::string filename("mech_60x60x6.png");
 	unit::textures[filename].loadFromFile(path + filename);
 
 	this->unit::sprites.emplace_back(
@@ -689,6 +691,13 @@ bool mech::damage(const damage_info &damage) noexcept{
 		part.second->durability -= part.second->durability > res.damage ?
 			res.damage : part.second->durability;
 
+	}
+
+	if(this->torso.durability <= 0){
+		this->unit::sprites.clear();
+		this->unit::sprites.emplace_back(
+			create_sprite_f(&unit::textures[filename],
+				60, 60, 1, 0));
 	}
 }
 
