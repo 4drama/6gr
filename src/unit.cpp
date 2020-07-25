@@ -516,15 +516,47 @@ class layout_item_f : public content_box_widget{
 public:
 	layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		std::map<std::string, sf::Sprite> *sprites,
-		float offset, std::shared_ptr<item> item)
-		: content_box_widget(sf::Vector2f(0, offset), sprites),
-		text(create_text(text_delete_contaier, item->get_name(), get_font(), 20)){
+		float offset, std::shared_ptr<item> item_)
+		: content_box_widget(sf::Vector2f(0, offset), sprites), item(item_),
+		name_text(create_text(text_delete_contaier, item->get_name(), get_font(), 20)),
+		slot_text(create_text(text_delete_contaier,
+			std::to_string(item->get_slots()), get_font(), 20)){
+
+		auto create_convex_shape = [](std::array<sf::Vector2f, 4> points,
+			sf::Color color = sf::Color(100, 100, 100)) -> sf::ConvexShape {
+			sf::ConvexShape res(points.size());
+			for(uint32_t i = 0; i < points.size(); ++i){
+				res.setPoint(i, points[i]);
+			}
+			res.setFillColor(color);
+			return res;
+		};
+
+		slots_shape = create_convex_shape({sf::Vector2f(0, 0), sf::Vector2f(30, 0),
+			sf::Vector2f(15, this->get_size()), sf::Vector2f(0, this->get_size())});
+		upper_line = create_convex_shape({sf::Vector2f(0, -2), sf::Vector2f(134, -2),
+			sf::Vector2f(130, 2), sf::Vector2f(0, 2)});
+		downer_line = create_convex_shape({sf::Vector2f(0, -2 + this->get_size()),
+			sf::Vector2f(134, -2 + this->get_size()), sf::Vector2f(130, 2 + this->get_size()),
+			sf::Vector2f(0, 2 + this->get_size())});
+		name_text->setColor(sf::Color(69, 69, 69));
 	}
 
 	void update(content_box *box) noexcept override{
-		text->setScale(box->get_scale(), -box->get_scale());
-		text->setPosition((this->position + box->get_position())
-			* box->get_scale());
+		auto update_func = [this, box](
+			auto &obj, sf::Vector2f offset = sf::Vector2f(0, 0)){
+
+			obj.setScale(box->get_scale(), -box->get_scale());
+			obj.setPosition((this->position + box->get_position() + offset)
+				* box->get_scale());
+		};
+
+		update_func(slots_shape);
+		update_func(*name_text, sf::Vector2f{30, 3});
+		update_func(*slot_text, sf::Vector2f{3, 3});
+
+		update_func(upper_line);
+		update_func(downer_line);
 	};
 
 	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
@@ -532,11 +564,27 @@ public:
 	};
 
 	void draw(sf::RenderWindow *window) override{
-		window->draw(*text);
+		window->draw(slots_shape);
+
+		window->draw(*name_text);
+		window->draw(*slot_text);
+
+		window->draw(upper_line);
+		window->draw(downer_line);
 	};
 
+	float get_size() const noexcept{
+		return 20 * std::floor(item->get_slots() / 2);
+	}
+
 private:
-	std::shared_ptr<sf::Text> text;
+	std::shared_ptr<item> item;
+	std::shared_ptr<sf::Text> name_text;
+	std::shared_ptr<sf::Text> slot_text;
+
+	sf::ConvexShape slots_shape;
+	sf::ConvexShape upper_line;
+	sf::ConvexShape downer_line;
 };
 
 void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offset,
@@ -551,10 +599,14 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 
 	constexpr float info_size = -70;
 	int i = 0;
+	float foffset = info_size;
 	for(auto &item_ptr : part->items){
-		part_widget->add_widget(std::make_shared<layout_item_f>(
+		auto widget = std::make_shared<layout_item_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			info_size + i * -20, item_ptr));
+			foffset, item_ptr);
+
+		part_widget->add_widget(widget);
+		foffset -= widget->get_size();
 		++i;
 	}
 	window->add_widget(part_widget);
