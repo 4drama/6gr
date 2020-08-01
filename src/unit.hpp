@@ -155,6 +155,7 @@ struct part_of_mech{
 	part_of_mech(float durability, float weight, uint32_t slots, float priority);
 	void prepare_for_refresh() noexcept;
 	bool add_item(std::shared_ptr<item> item);
+	bool delete_item(std::shared_ptr<item> item);
 	void validate();
 
 	float durability = 30;
@@ -199,6 +200,8 @@ public:
 
 	inline void set_waiting_item(item *item) noexcept{this->waiting_confirm = item;};
 	inline item *get_waiting_item() const noexcept{return waiting_confirm;};
+
+	bool delete_item(std::shared_ptr<item> item_ptr);
 
 	bool try_spend(const mech_status &status) noexcept;
 	bool try_loading_torpedo(weapon* weapon_ptr);

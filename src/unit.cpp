@@ -226,6 +226,10 @@ bool part_of_mech::add_item(std::shared_ptr<item> item){
 	}
 };
 
+bool part_of_mech::delete_item(std::shared_ptr<item> dell_item){
+	this->items.remove(dell_item);
+}
+
 void part_of_mech::validate(){
 	if(this->durability <= 0){
 		this->status.current_energy = 0;
@@ -491,7 +495,7 @@ public:
 	};
 
 	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
-
+		return false;
 	};
 
 	void draw(sf::RenderWindow *window) override{
@@ -513,14 +517,28 @@ private:
 sf::Texture layout_part_info_f::texture{};
 
 class layout_item_f : public content_box_widget{
+	static sf::Texture texture;
+	static void load_sprites(std::map<std::string, sf::Sprite> *sprites){
+		layout_item_f::texture.loadFromFile("./../data/layout_items_close.png");
+
+		(*sprites)["layout_items_close"] = sf::Sprite(layout_item_f::texture,
+			sf::IntRect(0, 0, 18, 18));
+		(*sprites)["layout_items_close"].setPosition(0, 0);
+	}
 public:
 	layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		std::map<std::string, sf::Sprite> *sprites,
-		float offset, std::shared_ptr<item> item_)
-		: content_box_widget(sf::Vector2f(0, offset), sprites), item(item_),
-		name_text(create_text(text_delete_contaier, item->get_name(), get_font(), 20)),
+		float offset, std::shared_ptr<item> item_, mech *mech_ptr_)
+		: content_box_widget(sf::Vector2f(0, offset), sprites), item(item_), mech_ptr(mech_ptr_),
+		name_text(create_text(text_delete_contaier, item_->get_name(), get_font(), 20)),
 		slot_text(create_text(text_delete_contaier,
-			std::to_string(item->get_slots()), get_font(), 20)){
+			std::to_string(item_->get_slots()), get_font(), 20)){
+
+		if(sprites->find("layout_items_close") == sprites->end()){
+			layout_item_f::load_sprites(sprites);
+		}
+
+		this->close_sprite = (*sprites)["layout_items_close"];
 
 		auto create_convex_shape = [](std::array<sf::Vector2f, 4> points,
 			sf::Color color = sf::Color(100, 100, 100)) -> sf::ConvexShape {
@@ -557,10 +575,18 @@ public:
 
 		update_func(upper_line);
 		update_func(downer_line);
+
+		update_func(this->close_sprite, sf::Vector2f{115, -1});
 	};
 
 	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
+		if(is_inside(this->close_sprite, pos)
+		 	&& (event.mouseButton.button == sf::Mouse::Button::Left)){
 
+			mech_ptr->delete_item(item.lock());
+			return true;
+		} else
+			return false;
 	};
 
 	void draw(sf::RenderWindow *window) override{
@@ -569,26 +595,35 @@ public:
 		window->draw(*name_text);
 		window->draw(*slot_text);
 
+		window->draw(this->close_sprite);
+
 		window->draw(upper_line);
 		window->draw(downer_line);
+
 	};
 
 	float get_size() const noexcept{
-		return 20 * std::floor(item->get_slots() / 2);
+		return 20 * std::floor(item.lock()->get_slots() / 2);
 	}
 
 private:
-	std::shared_ptr<item> item;
+	std::weak_ptr<item> item;
+	mech *mech_ptr;
+
 	std::shared_ptr<sf::Text> name_text;
 	std::shared_ptr<sf::Text> slot_text;
 
 	sf::ConvexShape slots_shape;
 	sf::ConvexShape upper_line;
 	sf::ConvexShape downer_line;
+
+	sf::Sprite close_sprite;
 };
 
+sf::Texture layout_item_f::texture{};
+
 void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offset,
-	part_of_mech *part, client *client){
+	part_of_mech *part, client *client, mech *mech_ptr){
 	std::shared_ptr<content_box> part_widget =
 		std::make_shared<content_box>(game_window::get_sprite_ptr(),
 		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, -293});
@@ -603,7 +638,7 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 	for(auto &item_ptr : part->items){
 		auto widget = std::make_shared<layout_item_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			foffset, item_ptr);
+			foffset, item_ptr, mech_ptr);
 
 		part_widget->add_widget(widget);
 		foffset -= widget->get_size();
@@ -629,14 +664,14 @@ item_shape mech::prepare_gui_shape(client *client){
 			[this, client](){
 				auto tmp_layout_window_ptr = client->create_window("Mech layout",
 				sf::Vector2f{0, 0}, sf::Vector2f{449, 300});
-				add_mech_layout_part(
-					tmp_layout_window_ptr, sf::Vector2f{3, 0}, &this->left_arm, client);
+				add_mech_layout_part(tmp_layout_window_ptr, sf::Vector2f{3, 0},
+					&this->left_arm, client, this);
 
-				add_mech_layout_part(
-					tmp_layout_window_ptr, sf::Vector2f{150, 0}, &this->torso, client);
+				add_mech_layout_part(tmp_layout_window_ptr, sf::Vector2f{150, 0},
+					&this->torso, client, this);
 
-				add_mech_layout_part(
-					tmp_layout_window_ptr, sf::Vector2f{297, 0}, &this->right_arm, client);
+				add_mech_layout_part(tmp_layout_window_ptr, sf::Vector2f{297, 0},
+					&this->right_arm, client, this);
 
 				const_cast<mech*>(this)->layout_window
 					= tmp_layout_window_ptr;
@@ -848,6 +883,17 @@ float mech::get_available_rate(mech_status necessary) const noexcept{
 		rate = energy_rate < heat_rate ? energy_rate : heat_rate;
 	}
 	return rate > 0 ? rate : 0;
+}
+
+bool mech::delete_item(std::shared_ptr<item> item_ptr){
+	std::array<part_of_mech*, 3> parts{&this->left_arm, &this->torso, &this->right_arm};
+	bool hit = false;
+	for(auto &part : parts){
+		if(part->delete_item(item_ptr))
+			hit = true;
+	}
+	this->refresh();
+	return hit;
 }
 
 bool mech::try_spend(const mech_status &status) noexcept{

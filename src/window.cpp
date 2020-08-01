@@ -298,8 +298,8 @@ game_window::game_window(deferred_deletion_container<sf::Text> *text_delete_cont
 }
 
 bool game_window::interact(sf::Vector2f pos, sf::Event event){
-	for(auto &widget : widgets){
-		if(widget->interact(this, pos, event))
+	for(auto it = this->widgets.rbegin(); it != this->widgets.rend(); ++it){
+		if((*it)->interact(this, pos, event))
 			return true;
 	}
 	return false;
