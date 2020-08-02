@@ -6,6 +6,8 @@
 #include "items.hpp"
 #include "map.hpp"
 
+#include "deletion_container.hpp"
+
 #include <map>
 #include <list>
 #include <memory>
@@ -207,6 +209,7 @@ public:
 	bool try_loading_torpedo(weapon* weapon_ptr);
 private:
 	static const std::string filename;
+	deferred_deletion_container<sf::Text> text_delete_contaier;
 
 	std::weak_ptr<game_window> layout_window;
 	item *waiting_confirm = nullptr;

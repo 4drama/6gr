@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "map.hpp"
+#include "deletion_container.hpp"
 
 #include <list>
 #include <functional>
@@ -161,7 +162,8 @@ public:
 
 	inline weapon* is_weapon() noexcept override {return this;};
 
-	weapon(const part_of_mech *part_ptr, std::string name, float delay);
+	weapon(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		const part_of_mech *part_ptr, std::string name, float delay);
 	void update(mech* owner, float time) override;
 
 	bool has_resources(const mech* owner) const noexcept;
@@ -177,7 +179,7 @@ public:
 	torpedo_loading(std::shared_ptr<torpedo_info> torpedo) noexcept;
 
 private:
-	mutable sf::Text text;
+	std::shared_ptr<sf::Text> text_ptr;
 
 	float shot_energy;
 	float shot_heat;
@@ -285,7 +287,8 @@ class engine : public item, public change_mech_status, public turn_on{
 
 	static void load_sprites();
 public:
-	engine(const part_of_mech *part_ptr, std::string name, int threshold);
+	engine(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		const part_of_mech *part_ptr, std::string name, int threshold);
 	inline engine* is_engine() noexcept override {return this;};
 
 	mech_status get_mech_changes(float time, const mech_status &status) const noexcept override;
@@ -309,8 +312,11 @@ private:
 		this->threshold = this->threshold < 0 ? 0 : this->threshold;
 	};
 
-	mutable sf::Text threshold_text;
-	mutable sf::Text threshold_value_text;
+	std::shared_ptr<sf::Text> threshold_text_ptr;
+	std::shared_ptr<sf::Text> threshold_value_text_ptr;
+	
+//	mutable sf::Text threshold_text;
+//	mutable sf::Text threshold_value_text;
 };
 
 class cooling_system : public item, public change_mech_status, public turn_on {

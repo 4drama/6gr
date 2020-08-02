@@ -313,12 +313,3 @@ void game_window::draw(sf::RenderWindow *window, float scale){
 	}
 
 }
-
-std::shared_ptr<sf::Text> create_text(
-	deferred_deletion_container<sf::Text> *text_delete_contaier,
-	const sf::String &string, const sf::Font &font, unsigned int characterSize){
-	std::shared_ptr<sf::Text> res =
-		std::make_shared<sf::Text>(string, font, characterSize);
-	text_delete_contaier->add_pointer(res);
-	return res;
-}

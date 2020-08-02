@@ -172,16 +172,19 @@ mech::mech(uint32_t cell_index_)
 		create_sprite_f(&unit::textures[filename],
 			60, 60, 0, 0));
 
-	this->left_arm.add_item(std::make_shared<weapon>(&this->left_arm, "Rocket", 15000));
+	this->left_arm.add_item(std::make_shared<weapon>(&this->text_delete_contaier,
+		&this->left_arm, "Rocket", 15000));
 	this->left_arm.add_item(std::make_shared<radiator>(&this->left_arm, "Radiator", 75));
 	this->left_arm.add_item(std::make_shared<accumulator>(&this->left_arm, "Accumulator", 50));
 
-	this->right_arm.add_item(std::make_shared<weapon>(&this->right_arm, "Rocket", 15000));
+	this->right_arm.add_item(std::make_shared<weapon>(&this->text_delete_contaier,
+		&this->right_arm, "Rocket", 15000));
 	this->right_arm.add_item(std::make_shared<radiator>(&this->right_arm, "Radiator", 75));
 	this->right_arm.add_item(std::make_shared<accumulator>(&this->right_arm, "Accumulator", 50));
 
 	this->torso.add_item(std::make_shared<legs>(&this->torso, "Legs"));
-	this->torso.add_item(std::make_shared<engine>(&this->torso, "Engine", 70));
+	this->torso.add_item(std::make_shared<engine>(&this->text_delete_contaier,
+		&this->torso, "Engine", 70));
 	this->torso.add_item(std::make_shared<tank>(&this->torso, "Tank", 20));
 	this->torso.add_item(std::make_shared<radiator>(&this->torso, "Radiator", 200));
 	this->torso.add_item(std::make_shared<accumulator>(&this->torso, "Accumulator", 100));
@@ -994,6 +997,8 @@ void mech::update_v(game_info *info, uint32_t player_index, float time){
 	update(this->torso);
 	update(this->left_arm);
 	update(this->right_arm);
+
+	text_delete_contaier.update();
 }
 
 std::pair<mech_status::type, float>

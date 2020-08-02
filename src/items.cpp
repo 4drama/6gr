@@ -89,12 +89,14 @@ item_shape turn_on::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
-weapon::weapon(const part_of_mech *part_ptr, std::string name, float delay_)
-	: item(part_ptr, name, 10, 3), delay(delay_ / 10000), text(name, get_font(), 22),
+weapon::weapon(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const part_of_mech *part_ptr, std::string name, float delay_)
+	: item(part_ptr, name, 10, 3), delay(delay_ / 10000),
+	text_ptr(create_text(text_delete_contaier, name, get_font(), 20)),
 	shot_energy(-25), shot_heat(40), delay_energy(-5){
 	if(weapon::sprites.empty())
 		weapon::load_sprites();
-	this->text.setPosition(39, 5);
+	this->text_ptr->setPosition(39, 5);
 }
 
 bool weapon::has_resources(const mech* owner) const noexcept{
@@ -293,7 +295,7 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 				shape.elements.emplace_back(button);
 			}
 			shape.text_elements.emplace_back(
-				update_text_f(scale, sf::Vector2f(39, 5), &this->text));
+				update_text_f(scale, sf::Vector2f(39, 5), this->text_ptr.get()));
 			shape.elements.emplace_back(weapon::sprites["active_button"],
 				[owner, this](){const_cast<mech*>(owner)->set_waiting_item(this);});
 		} else {
@@ -313,14 +315,14 @@ item_shape weapon::get_draw_shape(const mech* owner, client *client,
 				}
 			}
 			shape.text_elements.emplace_back(update_text_f(
-				scale, sf::Vector2f(40, 5), &this->text, sf::Color(140, 136, 136)));
+				scale, sf::Vector2f(40, 5), this->text_ptr.get(), sf::Color(140, 136, 136)));
 		}
 	} else {
 		shape.elements.emplace_back(weapon::sprites["inactive_hotkey_screen"], std::function<void()>());
 		shape.elements.emplace_back(weapon::sprites["inactive_button"], std::function<void()>());
 		shape.elements.emplace_back(weapon::sprites["inactive_delay_screen"], std::function<void()>());
 		shape.text_elements.emplace_back(update_text_f(
-			scale,sf::Vector2f(40, 5), &this->text, sf::Color(140, 136, 136)));
+			scale,sf::Vector2f(40, 5), this->text_ptr.get(), sf::Color(140, 136, 136)));
 	}
 
 	place_shape_f(shape, scale, position);
@@ -445,11 +447,16 @@ void engine::load_sprites(){
 	engine::sprites["threshold_plus"].setPosition(17 + 35 + 2 + 35 + 2 + 86 + 2, 0);
 };
 
-engine::engine(const part_of_mech *part_ptr, std::string name, int threshold_ = 0)
+engine::engine(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const part_of_mech *part_ptr, std::string name, int threshold_ = 0)
 	: item(part_ptr, name, 30, 5), performance{60.0f, 60.0f, 0.3f},
 		threshold(threshold_),
-		threshold_text(std::string("threshold"), get_font(), 20),
-		threshold_value_text(std::to_string(threshold_), get_font(), 21){
+		threshold_text_ptr(
+			create_text(text_delete_contaier, std::string("threshold"), get_font(), 20)),
+		threshold_value_text_ptr(
+			create_text(text_delete_contaier, std::to_string(threshold_), get_font(), 21))
+	/*	threshold_text(std::string("threshold"), get_font(), 20),
+		threshold_value_text(std::to_string(threshold_), get_font(), 21)*/{
 
 	if(engine::sprites.empty())
 		engine::load_sprites();
@@ -482,11 +489,12 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 		shape.elements.emplace_back(engine::sprites["display_on"], std::function<void()>());
 
 		shape.text_elements.emplace_back(update_text_f(
-			scale, sf::Vector2f(95, 3), &this->threshold_text, sf::Color(112, 166, 65)));
+			scale, sf::Vector2f(95, 3), this->threshold_text_ptr.get(), sf::Color(112, 166, 65)));
 
-		this->threshold_value_text.setString(std::to_string(this->threshold) + std::string("%"));
-		shape.text_elements.emplace_back(update_text_f(
-			scale, sf::Vector2f(115, -11), &this->threshold_value_text, sf::Color(112, 166, 65)));
+		this->threshold_value_text_ptr->setString(
+			std::to_string(this->threshold) + std::string("%"));
+		shape.text_elements.emplace_back(update_text_f(scale, sf::Vector2f(115, -11),
+			this->threshold_value_text_ptr.get(), sf::Color(112, 166, 65)));
 	} else {
 		shape.elements.emplace_back(engine::sprites["display_off"], std::function<void()>());
 	}

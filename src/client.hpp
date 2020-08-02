@@ -14,20 +14,12 @@ class client;
 #include <functional>
 #include <memory>
 
+#include "deletion_container.hpp"
+
 template<typename bounds_type>
 bool is_inside(bounds_type bounds, sf::Vector2f pos);
 
 class item_shape;
-
-template<typename T>
-class deferred_deletion_container{
-public:
-	void add_pointer(std::shared_ptr<T> ptr);
-	void update();
-private:
-	std::list<std::shared_ptr<T>> pointers;
-	std::list<std::shared_ptr<T>> to_dell;
-};
 
 class client{
 public:
@@ -140,24 +132,5 @@ template<typename drawable_type>
 void client::prepare_to_draw(drawable_type& object) const noexcept{
 	object.setPosition(this->perspective(object.getPosition()));
 };
-
-template<typename T>
-void deferred_deletion_container<T>::update(){
-	to_dell.clear();
-
-	for(auto it = pointers.begin(); it != pointers.end();){
-		if(it->use_count() == 1){
-			to_dell.emplace_back(*it);
-			it = pointers.erase(it);
-		} else {
-			++it;
-		}
-	}
-}
-
-template<typename T>
-void deferred_deletion_container<T>::add_pointer(std::shared_ptr<T> ptr){
-	pointers.emplace_back(ptr);
-}
 
 #endif
