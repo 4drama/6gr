@@ -555,10 +555,10 @@ public:
 
 		slots_shape = create_convex_shape({sf::Vector2f(0, 0), sf::Vector2f(30, 0),
 			sf::Vector2f(15, this->get_size()), sf::Vector2f(0, this->get_size())});
-		upper_line = create_convex_shape({sf::Vector2f(0, -2), sf::Vector2f(134, -2),
-			sf::Vector2f(130, 2), sf::Vector2f(0, 2)});
+		upper_line = create_convex_shape({sf::Vector2f(0, -2), sf::Vector2f(142, -2),
+			sf::Vector2f(138, 2), sf::Vector2f(0, 2)});
 		downer_line = create_convex_shape({sf::Vector2f(0, -2 + this->get_size()),
-			sf::Vector2f(134, -2 + this->get_size()), sf::Vector2f(130, 2 + this->get_size()),
+			sf::Vector2f(142, -2 + this->get_size()), sf::Vector2f(138, 2 + this->get_size()),
 			sf::Vector2f(0, 2 + this->get_size())});
 		name_text->setColor(sf::Color(69, 69, 69));
 	}
@@ -579,7 +579,7 @@ public:
 		update_func(upper_line);
 		update_func(downer_line);
 
-		update_func(this->close_sprite, sf::Vector2f{115, -1});
+		update_func(this->close_sprite, sf::Vector2f{123, -1});
 	};
 
 	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
@@ -627,6 +627,61 @@ private:
 
 sf::Texture layout_item_f::texture{};
 
+class new_layout_item_f : public content_box_widget{
+	static sf::Texture texture;
+	static void load_sprites(std::map<std::string, sf::Sprite> *sprites){
+		new_layout_item_f::texture.loadFromFile("./../data/layout_items_new.png");
+
+		(*sprites)["layout_items_new"] = sf::Sprite(new_layout_item_f::texture,
+			sf::IntRect(0, 0, 141, 18));
+		(*sprites)["layout_items_new"].setPosition(0, 0);
+	}
+public:
+	new_layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		std::map<std::string, sf::Sprite> *sprites,
+		float offset, mech *mech_ptr_)
+		: content_box_widget(sf::Vector2f(0, offset), sprites){
+		if(sprites->find("layout_items_new") == sprites->end()){
+			new_layout_item_f::load_sprites(sprites);
+		}
+
+		this->new_item_sprite = (*sprites)["layout_items_new"];
+	}
+
+	void update(content_box *box) noexcept override{
+		auto update_func = [this, box](
+			auto &obj, sf::Vector2f offset = sf::Vector2f(0, 0)){
+
+			obj.setScale(box->get_scale(), -box->get_scale());
+			obj.setPosition((this->position + box->get_position() + offset)
+				* box->get_scale());
+		};
+
+		update_func(this->new_item_sprite);
+	};
+
+	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
+		if(is_inside(this->new_item_sprite, pos)
+		 	&& (event.mouseButton.button == sf::Mouse::Button::Left)
+			&& (event.type == sf::Event::MouseButtonReleased)){
+
+			//create window with items
+
+			return true;
+		} else
+			return false;
+	};
+
+	void draw(sf::RenderWindow *window) override{
+		window->draw(this->new_item_sprite);
+	};
+
+private:
+	sf::Sprite new_item_sprite;
+};
+
+sf::Texture new_layout_item_f::texture{};
+
 void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offset,
 	part_of_mech *part, client *client, mech *mech_ptr){
 
@@ -647,10 +702,13 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 				client->get_delete_contaier(), game_window::get_sprite_ptr(),
 				foffset, item_ptr, mech_ptr);
 
-				part_widget->add_widget(widget);
-				foffset -= widget->get_size();
-				++i;
-			}
+			part_widget->add_widget(widget);
+			foffset -= widget->get_size();
+			++i;
+		}
+		part_widget->add_widget(std::make_shared<new_layout_item_f>(
+			client->get_delete_contaier(), game_window::get_sprite_ptr(),
+			foffset, mech_ptr));
 	};
 	part_widget->set_refresh_func(refresh_func);
 	part_widget->refresh();
