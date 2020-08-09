@@ -99,6 +99,14 @@ public:
 	inline sf::Vector2f get_position() const noexcept{
 		return this->position + this->offset;};
 	inline const float& get_scale() const noexcept{return this->scale;};
+
+	void refresh(){
+		widgets.clear();
+		this->refresh_func(this);
+	};
+
+	void set_refresh_func(std::function<void(content_box*)> refresh_func_){
+		this->refresh_func = refresh_func_;};
 private:
 	sf::Vector2f offset;
 	sf::Vector2f size;
@@ -106,6 +114,8 @@ private:
 
 	sf::RectangleShape main_zone;
 	std::list<std::shared_ptr<content_box_widget>> widgets;
+
+	std::function<void(content_box*)> refresh_func;
 };
 
 class content_box_widget{

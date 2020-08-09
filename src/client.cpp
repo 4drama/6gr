@@ -102,6 +102,12 @@ void client::change_zoom(int value){
 }
 
 void client::control_update(game_info *info, float time){
+/*	static int delay = 0;
+	if(delay > 0){
+		delay -= time;
+		return;
+	}*/
+
 	sf::Event event;
 	float speed = 5;
 
@@ -200,7 +206,7 @@ void client::control_update(game_info *info, float time){
 					return;
 			}
 		}
-
+		
 		static float left_click_cd = 0;
 		left_click_cd -= time;
 		if (event.type == sf::Event::MouseButtonPressed &&

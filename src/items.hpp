@@ -314,9 +314,6 @@ private:
 
 	std::shared_ptr<sf::Text> threshold_text_ptr;
 	std::shared_ptr<sf::Text> threshold_value_text_ptr;
-	
-//	mutable sf::Text threshold_text;
-//	mutable sf::Text threshold_value_text;
 };
 
 class cooling_system : public item, public change_mech_status, public turn_on {

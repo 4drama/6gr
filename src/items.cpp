@@ -454,9 +454,7 @@ engine::engine(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		threshold_text_ptr(
 			create_text(text_delete_contaier, std::string("threshold"), get_font(), 20)),
 		threshold_value_text_ptr(
-			create_text(text_delete_contaier, std::to_string(threshold_), get_font(), 21))
-	/*	threshold_text(std::string("threshold"), get_font(), 20),
-		threshold_value_text(std::to_string(threshold_), get_font(), 21)*/{
+			create_text(text_delete_contaier, std::to_string(threshold_), get_font(), 21)){
 
 	if(engine::sprites.empty())
 		engine::load_sprites();

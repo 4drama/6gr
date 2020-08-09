@@ -584,9 +584,11 @@ public:
 
 	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
 		if(is_inside(this->close_sprite, pos)
-		 	&& (event.mouseButton.button == sf::Mouse::Button::Left)){
+		 	&& (event.mouseButton.button == sf::Mouse::Button::Left)
+			&& (event.type == sf::Event::MouseButtonReleased)){
 
 			mech_ptr->delete_item(item.lock());
+			box->refresh();
 			return true;
 		} else
 			return false;
@@ -627,26 +629,31 @@ sf::Texture layout_item_f::texture{};
 
 void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offset,
 	part_of_mech *part, client *client, mech *mech_ptr){
+
 	std::shared_ptr<content_box> part_widget =
 		std::make_shared<content_box>(game_window::get_sprite_ptr(),
 		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, -293});
 
-	part_widget->add_widget(std::make_shared<layout_part_info_f>(
-		client->get_delete_contaier(), game_window::get_sprite_ptr(),
-		0, part));
-
-	constexpr float info_size = -70;
-	int i = 0;
-	float foffset = info_size;
-	for(auto &item_ptr : part->items){
-		auto widget = std::make_shared<layout_item_f>(
+	auto refresh_func = [client, part, mech_ptr](content_box* part_widget){
+		part_widget->add_widget(std::make_shared<layout_part_info_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			foffset, item_ptr, mech_ptr);
+			0, part));
 
-		part_widget->add_widget(widget);
-		foffset -= widget->get_size();
-		++i;
-	}
+		constexpr float info_size = -70;
+		int i = 0;
+		float foffset = info_size;
+		for(auto &item_ptr : part->items){
+			auto widget = std::make_shared<layout_item_f>(
+				client->get_delete_contaier(), game_window::get_sprite_ptr(),
+				foffset, item_ptr, mech_ptr);
+
+				part_widget->add_widget(widget);
+				foffset -= widget->get_size();
+				++i;
+			}
+	};
+	part_widget->set_refresh_func(refresh_func);
+	part_widget->refresh();
 	window->add_widget(part_widget);
 }
 
