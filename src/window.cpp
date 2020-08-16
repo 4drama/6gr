@@ -298,9 +298,19 @@ game_window::game_window(deferred_deletion_container<sf::Text> *text_delete_cont
 }
 
 bool game_window::interact(sf::Vector2f pos, sf::Event event){
+	if(context_menu_m && context_menu_m->interact(this, pos, event)){
+		this->context_menu_m = nullptr;
+		return true;
+	}
+
+	if(event.type == sf::Event::MouseButtonReleased){
+		this->context_menu_m = nullptr;
+	}
+
 	for(auto it = this->widgets.rbegin(); it != this->widgets.rend(); ++it){
-		if((*it)->interact(this, pos, event))
+		if((*it)->interact(this, pos, event)){
 			return true;
+		}
 	}
 	return false;
 }
@@ -312,4 +322,43 @@ void game_window::draw(sf::RenderWindow *window, float scale){
 		widget->draw(window);
 	}
 
+	if(context_menu_m){
+		context_menu_m->update(this);
+		context_menu_m->draw(window);
+	}
+}
+
+context_menu::context_menu(sf::Vector2f position,
+	std::map<std::string, sf::Sprite> *sprites,
+	deferred_deletion_container<sf::Text> *text_delete_contaier)
+	: widget(position, sprites), main_zone(sf::Vector2f(100, 100)){
+	main_zone.setPosition(position);
+}
+
+void context_menu::update(game_window *win) noexcept{
+	auto update_func = [this, win](
+		auto &obj, sf::Vector2f offset = sf::Vector2f(0, 0)){
+
+		obj.setScale(win->get_scale(), -win->get_scale());
+		obj.setPosition((this->position + win->get_position() + offset)
+			* win->get_scale());
+	};
+
+	update_func(this->main_zone);
+}
+
+bool context_menu::interact(game_window *win, sf::Vector2f pos, sf::Event event){
+	if(is_inside(this->main_zone, pos)
+		&& (event.mouseButton.button == sf::Mouse::Button::Left)
+		&& (event.type == sf::Event::MouseButtonReleased)){
+
+		std::cerr << "context_menu::interact" << std::endl;
+
+		return true;
+	} else
+		return false;
+}
+
+void context_menu::draw(sf::RenderWindow *window){
+	window->draw(this->main_zone);
 }

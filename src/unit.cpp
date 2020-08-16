@@ -639,13 +639,19 @@ class new_layout_item_f : public content_box_widget{
 public:
 	new_layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		std::map<std::string, sf::Sprite> *sprites,
-		float offset, mech *mech_ptr_)
+		float offset, mech *mech_ptr_, game_window* window_)
 		: content_box_widget(sf::Vector2f(0, offset), sprites){
 		if(sprites->find("layout_items_new") == sprites->end()){
 			new_layout_item_f::load_sprites(sprites);
 		}
 
 		this->new_item_sprite = (*sprites)["layout_items_new"];
+		create_context_menu_func = [text_delete_contaier, sprites, window_]
+			(sf::Vector2f pos){
+			window_->replace_context_menu(
+				context_menu(pos / window_->get_scale() - window_->get_position(), 
+				sprites, text_delete_contaier));
+		};
 	}
 
 	void update(content_box *box) noexcept override{
@@ -665,7 +671,7 @@ public:
 		 	&& (event.mouseButton.button == sf::Mouse::Button::Left)
 			&& (event.type == sf::Event::MouseButtonReleased)){
 
-			//create window with items
+			create_context_menu_func(pos);
 
 			return true;
 		} else
@@ -678,6 +684,8 @@ public:
 
 private:
 	sf::Sprite new_item_sprite;
+
+	std::function<void(sf::Vector2f pos)> create_context_menu_func;
 };
 
 sf::Texture new_layout_item_f::texture{};
@@ -689,7 +697,8 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		std::make_shared<content_box>(game_window::get_sprite_ptr(),
 		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, -293});
 
-	auto refresh_func = [client, part, mech_ptr](content_box* part_widget){
+	game_window *window_ptr = window.get();
+	auto refresh_func = [client, part, mech_ptr, window_ptr](content_box* part_widget){
 		part_widget->add_widget(std::make_shared<layout_part_info_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
 			0, part));
@@ -708,7 +717,7 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		}
 		part_widget->add_widget(std::make_shared<new_layout_item_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			foffset, mech_ptr));
+			foffset, mech_ptr, window_ptr));
 	};
 	part_widget->set_refresh_func(refresh_func);
 	part_widget->refresh();

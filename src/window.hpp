@@ -103,7 +103,7 @@ public:
 	void refresh(){ widgets.clear(); this->refresh_func(this);};
 	void set_refresh_func(std::function<void(content_box*)> refresh_func_) noexcept{
 		this->refresh_func = refresh_func_;};
-		
+
 private:
 	sf::Vector2f offset;
 	sf::Vector2f size;
@@ -126,6 +126,18 @@ public:
 protected:
 	std::map<std::string, sf::Sprite> *sprites_ptr;
 	sf::Vector2f position;
+};
+
+class context_menu : public widget{
+public:
+	context_menu(sf::Vector2f position, std::map<std::string, sf::Sprite> *sprites,
+		deferred_deletion_container<sf::Text> *text_delete_contaier);
+
+	void update(game_window *win) noexcept override;
+	bool interact(game_window *win, sf::Vector2f pos, sf::Event event) override;
+	void draw(sf::RenderWindow *window) override;
+private:
+	sf::RectangleShape main_zone;
 };
 
 class game_window{
@@ -154,12 +166,16 @@ public:
 	inline void add_widget(std::shared_ptr<widget> widget){
 		this->widgets.emplace_back(widget);};
 
+	void replace_context_menu(context_menu menu){
+		this->context_menu_m = std::make_shared<context_menu>(menu);};
+
 private:
 	sf::Vector2f position;
 	sf::Vector2f size;
 	float scale;
 
 	std::list<std::shared_ptr<widget>> widgets;
+	std::shared_ptr<context_menu> context_menu_m = nullptr;
 
 	bool is_close_m = false;
 };
