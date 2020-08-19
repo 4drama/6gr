@@ -640,24 +640,25 @@ public:
 	new_layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		std::map<std::string, sf::Sprite> *sprites,
 		float offset, item_db *item_db_ptr_, part_of_mech *part_ptr_, garage *garage_ptr_,
-		game_window* window_)
-		: content_box_widget(sf::Vector2f(0, offset), sprites)/*, garage_ptr(garage_ptr_)*/{
+		game_window* window_, content_box* box)
+		: content_box_widget(sf::Vector2f(0, offset), sprites){
 		if(sprites->find("layout_items_new") == sprites->end()){
 			new_layout_item_f::load_sprites(sprites);
 		}
 
 		this->new_item_sprite = (*sprites)["layout_items_new"];
-		create_context_menu_func = [text_delete_contaier, sprites, window_,
+		create_context_menu_func = [text_delete_contaier, sprites, window_, box,
 			item_db_ptr_, part_ptr_, garage_ptr_]
 			(sf::Vector2f pos){
 			auto c_menu = context_menu(pos / window_->get_scale() - window_->get_position(),
 				sprites, text_delete_contaier);
 
 			//	TO DO current garage entities
-			c_menu.add_entity(std::shared_ptr<sf::Text>{},
-				[part_ptr_, item_db_ptr_, text_delete_contaier, garage_ptr_](){
+			c_menu.add_entity(std::shared_ptr<sf::Text>{}, [part_ptr_, item_db_ptr_,
+				text_delete_contaier, garage_ptr_, box](){
 				part_ptr_->add_item(garage_ptr_->take_item(item_db_ptr_,
 					text_delete_contaier, part_ptr_, 0));
+				box->refresh();
 			});
 
 			window_->replace_context_menu(c_menu);
@@ -696,7 +697,6 @@ private:
 	sf::Sprite new_item_sprite;
 
 	std::function<void(sf::Vector2f pos)> create_context_menu_func;
-//	garage *garage_ptr;
 };
 
 sf::Texture new_layout_item_f::texture{};
@@ -732,7 +732,7 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		}
 		part_widget->add_widget(std::make_shared<new_layout_item_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			foffset, item_db_ptr, part, garage_ptr, window_ptr));
+			foffset, item_db_ptr, part, garage_ptr, window_ptr, part_widget));
 	};
 	part_widget->set_refresh_func(refresh_func);
 	part_widget->refresh();
