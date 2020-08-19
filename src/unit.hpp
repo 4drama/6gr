@@ -5,6 +5,7 @@
 
 #include "items.hpp"
 #include "map.hpp"
+#include "garage.hpp"
 
 #include "deletion_container.hpp"
 
@@ -22,6 +23,7 @@ class weapon;
 class torpedo_info;
 struct damage_info;
 class game_window;
+class item_db;
 
 class projectile{
 	static sf::Texture texture;
@@ -184,10 +186,10 @@ class mech : public unit{
 
 	static void load_sprites();
 public:
-	static inline std::shared_ptr<mech> create(uint32_t cell_index){
-		return std::make_shared<mech>(cell_index);};
+	static inline std::shared_ptr<mech> create(uint32_t cell_index, item_db *item_db_ptr){
+		return std::make_shared<mech>(cell_index, item_db_ptr);};
 
-	mech(uint32_t cell_index);
+	mech(uint32_t cell_index, item_db *item_db_ptr);
 
 	float get_speed(terrain_en ter_type) const noexcept override;
 
@@ -231,7 +233,7 @@ private:
 	void update_v(game_info *info, uint32_t player_index, float time);
 
 	item_shape prepare_shape(client *client) const;
-	item_shape prepare_gui_shape(client *client);
+	item_shape prepare_gui_shape(game_info *info, client *client);
 	void refresh();
 
 	float move_calculate(float time, terrain_en ter_type) noexcept override;

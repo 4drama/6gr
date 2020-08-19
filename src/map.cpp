@@ -987,13 +987,12 @@ void player_respawn(game_info *info, client *client){
 	if(client != nullptr)
 		client->set_camera(-info->map[spawn_cell_index].pos);
 
-/*	std::shared_ptr<unit> caravan =
-		unit::create_caravan(unit::weight_level_type::LIGHT, spawn_cell_index);*/
 
-	std::shared_ptr<unit> mech = mech::create(spawn_cell_index);
+	std::shared_ptr<unit> mech = mech::create(spawn_cell_index, &info->item_db);
 
 	info->map[spawn_cell_index].unit = mech;
 	info->players[player_index].units.emplace_back(mech);
+	info->players[player_index].garage.put_item(0, 99);		// TO DO other items
 
 	for(auto &unit : info->players[player_index].units)
 		unit->open_vision(info, player_index);

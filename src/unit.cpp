@@ -152,7 +152,7 @@ void mech::load_sprites(){
 	sprites["window_layout_close"].setPosition(0, 0);
 }
 
-mech::mech(uint32_t cell_index_)
+mech::mech(uint32_t cell_index_, item_db *item_db_ptr)
 	: unit(cell_index_, 4),
 	left_arm(60, 25, 7, 2.0f),
 	torso(120, 80, 18, 1.0f),
@@ -172,13 +172,13 @@ mech::mech(uint32_t cell_index_)
 		create_sprite_f(&unit::textures[filename],
 			60, 60, 0, 0));
 
-	this->left_arm.add_item(std::make_shared<weapon>(&this->text_delete_contaier,
-		&this->left_arm, "Rocket", 15000));
+	this->left_arm.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->right_arm, 0));		// TO DO other items
 	this->left_arm.add_item(std::make_shared<radiator>(&this->left_arm, "Radiator", 75));
 	this->left_arm.add_item(std::make_shared<accumulator>(&this->left_arm, "Accumulator", 50));
 
-	this->right_arm.add_item(std::make_shared<weapon>(&this->text_delete_contaier,
-		&this->right_arm, "Rocket", 15000));
+//	this->right_arm.add_item(std::make_shared<weapon>(&this->text_delete_contaier,
+//		&this->right_arm, "Rocket", 15000));
 	this->right_arm.add_item(std::make_shared<radiator>(&this->right_arm, "Radiator", 75));
 	this->right_arm.add_item(std::make_shared<accumulator>(&this->right_arm, "Accumulator", 50));
 
@@ -639,18 +639,28 @@ class new_layout_item_f : public content_box_widget{
 public:
 	new_layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		std::map<std::string, sf::Sprite> *sprites,
-		float offset, mech *mech_ptr_, game_window* window_)
-		: content_box_widget(sf::Vector2f(0, offset), sprites){
+		float offset, item_db *item_db_ptr_, part_of_mech *part_ptr_, garage *garage_ptr_,
+		game_window* window_)
+		: content_box_widget(sf::Vector2f(0, offset), sprites)/*, garage_ptr(garage_ptr_)*/{
 		if(sprites->find("layout_items_new") == sprites->end()){
 			new_layout_item_f::load_sprites(sprites);
 		}
 
 		this->new_item_sprite = (*sprites)["layout_items_new"];
-		create_context_menu_func = [text_delete_contaier, sprites, window_]
+		create_context_menu_func = [text_delete_contaier, sprites, window_,
+			item_db_ptr_, part_ptr_, garage_ptr_]
 			(sf::Vector2f pos){
-			window_->replace_context_menu(
-				context_menu(pos / window_->get_scale() - window_->get_position(), 
-				sprites, text_delete_contaier));
+			auto c_menu = context_menu(pos / window_->get_scale() - window_->get_position(),
+				sprites, text_delete_contaier);
+
+			//	TO DO current garage entities
+			c_menu.add_entity(std::shared_ptr<sf::Text>{},
+				[part_ptr_, item_db_ptr_, text_delete_contaier, garage_ptr_](){
+				part_ptr_->add_item(garage_ptr_->take_item(item_db_ptr_,
+					text_delete_contaier, part_ptr_, 0));
+			});
+
+			window_->replace_context_menu(c_menu);
 		};
 	}
 
@@ -686,19 +696,24 @@ private:
 	sf::Sprite new_item_sprite;
 
 	std::function<void(sf::Vector2f pos)> create_context_menu_func;
+//	garage *garage_ptr;
 };
 
 sf::Texture new_layout_item_f::texture{};
 
 void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offset,
-	part_of_mech *part, client *client, mech *mech_ptr){
+	part_of_mech *part, game_info *info, client *client, mech *mech_ptr){
+	uint32_t player_id = client->get_player_info().player;
+	garage *garage_ptr = &info->players[player_id].garage;
 
 	std::shared_ptr<content_box> part_widget =
 		std::make_shared<content_box>(game_window::get_sprite_ptr(),
 		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, -293});
 
 	game_window *window_ptr = window.get();
-	auto refresh_func = [client, part, mech_ptr, window_ptr](content_box* part_widget){
+	auto refresh_func = [client, part, mech_ptr, garage_ptr, window_ptr,
+		item_db_ptr = &info->item_db](
+		content_box* part_widget){
 		part_widget->add_widget(std::make_shared<layout_part_info_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
 			0, part));
@@ -717,7 +732,7 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		}
 		part_widget->add_widget(std::make_shared<new_layout_item_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			foffset, mech_ptr, window_ptr));
+			foffset, item_db_ptr, part, garage_ptr, window_ptr));
 	};
 	part_widget->set_refresh_func(refresh_func);
 	part_widget->refresh();
@@ -726,7 +741,7 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 
 }
 
-item_shape mech::prepare_gui_shape(client *client){
+item_shape mech::prepare_gui_shape(game_info *info, client *client){
 	float scale = client->get_view_scale();
 	for(auto &sprite : mech::sprites){
 		sprite.second.setScale(scale, -scale);
@@ -738,17 +753,17 @@ item_shape mech::prepare_gui_shape(client *client){
 			std::function<void()>());
 	} else {
 		gui_shape.elements.emplace_back(mech::sprites["window_layout_open"],
-			[this, client](){
+			[this, info, client](){
 				auto tmp_layout_window_ptr = client->create_window("Mech layout",
 				sf::Vector2f{0, 0}, sf::Vector2f{449, 300});
 				add_mech_layout_part(tmp_layout_window_ptr, sf::Vector2f{3, 0},
-					&this->left_arm, client, this);
+					&this->left_arm, info, client, this);
 
 				add_mech_layout_part(tmp_layout_window_ptr, sf::Vector2f{150, 0},
-					&this->torso, client, this);
+					&this->torso, info, client, this);
 
 				add_mech_layout_part(tmp_layout_window_ptr, sf::Vector2f{297, 0},
-					&this->right_arm, client, this);
+					&this->right_arm, info, client, this);
 
 				const_cast<mech*>(this)->layout_window
 					= tmp_layout_window_ptr;
@@ -786,14 +801,14 @@ void mech::draw_gui(game_info *info, client *client){
 		this->layout_window.reset();
 	}
 
-	::item_shape gui_shape = this->prepare_gui_shape(client);
+	::item_shape gui_shape = this->prepare_gui_shape(info, client);
 	client->draw_item_shape(gui_shape);
 }
 
 bool mech::interact_gui(game_info *info, client *client){
 	float scale = client->get_view_scale();
 	sf::Vector2f pos = client->mouse_on_map();
-	item_shape shape = prepare_shape(client) + prepare_gui_shape(client);
+	item_shape shape = prepare_shape(client) + prepare_gui_shape(info, client);
 	for(auto &but : shape.elements){
 		if(is_inside(but.sprite, pos)){
 			if(but.func){

@@ -163,7 +163,8 @@ public:
 	inline weapon* is_weapon() noexcept override {return this;};
 
 	weapon(deferred_deletion_container<sf::Text> *text_delete_contaier,
-		const part_of_mech *part_ptr, std::string name, float delay);
+		const part_of_mech *part_ptr,
+		std::string name, float weight, uint32_t slots, float delay);
 	void update(mech* owner, float time) override;
 
 	bool has_resources(const mech* owner) const noexcept;

@@ -136,8 +136,12 @@ public:
 	void update(game_window *win) noexcept override;
 	bool interact(game_window *win, sf::Vector2f pos, sf::Event event) override;
 	void draw(sf::RenderWindow *window) override;
+
+	void add_entity(std::shared_ptr<sf::Text> text, std::function<void()> func);
 private:
 	sf::RectangleShape main_zone;
+
+	std::function<void()> func;			// TEST, TO DO list for every entity
 };
 
 class game_window{

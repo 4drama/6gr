@@ -353,6 +353,7 @@ bool context_menu::interact(game_window *win, sf::Vector2f pos, sf::Event event)
 		&& (event.type == sf::Event::MouseButtonReleased)){
 
 		std::cerr << "context_menu::interact" << std::endl;
+		func();	// TEST, TO DO
 
 		return true;
 	} else
@@ -361,4 +362,9 @@ bool context_menu::interact(game_window *win, sf::Vector2f pos, sf::Event event)
 
 void context_menu::draw(sf::RenderWindow *window){
 	window->draw(this->main_zone);
+}
+
+void context_menu::add_entity(
+	std::shared_ptr<sf::Text> text, std::function<void()> func_){
+	func = func_;			// TEST, TO DO add entity
 }

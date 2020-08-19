@@ -8,10 +8,11 @@ SRC_DIR= ./src/
 OBJ_DIR= ./obj/
 BIN_DIR= ./bin/
 
-all: map client control gui main unit items window math effects
+all: map client control gui main unit items window math effects garage
 	$(CC) $(LIBFLAGS) $(OBJ_DIR)main.o $(OBJ_DIR)map.o $(OBJ_DIR)control.o \
 	$(OBJ_DIR)gui.o $(OBJ_DIR)client.o $(OBJ_DIR)unit.o $(OBJ_DIR)window.o \
-	$(OBJ_DIR)items.o $(OBJ_DIR)math.o $(OBJ_DIR)effects.o -o $(BIN_DIR)game.exe $(LDFLAGS)
+	$(OBJ_DIR)items.o $(OBJ_DIR)math.o $(OBJ_DIR)effects.o $(OBJ_DIR)garage.o \
+	-o $(BIN_DIR)game.exe $(LDFLAGS)
 
 unit:
 	$(CC) $(CFLAGS) $(SRC_DIR)unit.cpp -o $(OBJ_DIR)unit.o
@@ -39,6 +40,9 @@ math:
 
 effects:
 	$(CC) $(CFLAGS) $(SRC_DIR)effects.cpp -o $(OBJ_DIR)effects.o
+
+garage:
+	$(CC) $(CFLAGS) $(SRC_DIR)garage.cpp -o $(OBJ_DIR)garage.o
 
 main:
 	$(CC) $(CFLAGS) $(SRC_DIR)main.cpp -o $(OBJ_DIR)main.o

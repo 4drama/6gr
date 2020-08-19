@@ -16,6 +16,7 @@ struct game_info;
 class effect;
 class static_effect;
 class animation;
+class item_db;
 
 #include "client.hpp"
 #include "effects.hpp"
@@ -58,6 +59,7 @@ enum class terrain_en{
 };
 
 #include "unit.hpp"
+#include "garage.hpp"
 
 struct object{
 	enum class texture_type{
@@ -168,6 +170,7 @@ struct player{
 	using selected_unit_type = std::pair< player_index_type, std::weak_ptr<unit> >;
 	std::string name = "default";
 
+	garage garage;
 	std::vector< std::shared_ptr<unit> > units;
 
 	uint32_t selected_cell = UINT32_MAX;
@@ -185,6 +188,7 @@ struct game_info{
 
 	std::vector<cell> map;
 	std::vector<player> players;
+	item_db item_db;
 
 	enum speed_e{
 		X1,

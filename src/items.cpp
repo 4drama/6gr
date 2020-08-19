@@ -90,8 +90,9 @@ item_shape turn_on::get_draw_shape(const mech* owner, client *client,
 }
 
 weapon::weapon(deferred_deletion_container<sf::Text> *text_delete_contaier,
-	const part_of_mech *part_ptr, std::string name, float delay_)
-	: item(part_ptr, name, 10, 3), delay(delay_ / 10000),
+	const part_of_mech *part_ptr, std::string name,
+	float weight, uint32_t slots, float delay_)
+	: item(part_ptr, name, weight, slots), delay(delay_ / 10000),
 	text_ptr(create_text(text_delete_contaier, name, get_font(), 20)),
 	shot_energy(-25), shot_heat(40), delay_energy(-5){
 	if(weapon::sprites.empty())
