@@ -128,6 +128,30 @@ protected:
 	sf::Vector2f position;
 };
 
+class context_entity : public widget{
+public:
+	const static inline sf::Vector2f size = sf::Vector2f{200, 20};
+
+	context_entity(sf::Vector2f pos, sf::Color zone_color,
+		std::shared_ptr<sf::Text> text,	std::function<void()> func);
+
+	void update(game_window *win) noexcept override;
+	bool interact(game_window *win, sf::Vector2f pos, sf::Event event) override;
+	void draw(sf::RenderWindow *window) override;
+
+	void reset_color() noexcept {
+		if(interact_zone.getFillColor().a != 0)
+			this->interact_zone.setFillColor(sf::Color(0, 0, 0, 0));
+	}
+
+private:
+	sf::RectangleShape interact_zone;
+	std::shared_ptr<sf::Text> text;
+	std::function<void()> func;
+
+	sf::Color zone_color;
+};
+
 class context_menu : public widget{
 public:
 	context_menu(sf::Vector2f position, std::map<std::string, sf::Sprite> *sprites,
@@ -141,7 +165,8 @@ public:
 private:
 	sf::RectangleShape main_zone;
 
-	std::function<void()> func;			// TEST, TO DO list for every entity
+	std::list<context_entity> entities;
+	sf::Color chosen_color;
 };
 
 class game_window{

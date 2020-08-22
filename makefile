@@ -1,6 +1,6 @@
 CC=gcc
 
-CFLAGS=-c -DSFML_STATIC -std=c++14 -g -pthread -IG:\libraries\SFML-2.5.1\include
+CFLAGS=-c -DSFML_STATIC -std=c++17 -g -pthread -IG:\libraries\SFML-2.5.1\include
 LIBFLAGS=-LG:/libraries/SFML-2.5.1/lib
 LDFLAGS=-lsfml-graphics -lsfml-window -lsfml-system -lstdc++
 

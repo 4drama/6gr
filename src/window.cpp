@@ -328,11 +328,61 @@ void game_window::draw(sf::RenderWindow *window, float scale){
 	}
 }
 
+context_entity::context_entity(sf::Vector2f pos, sf::Color zone_color_,
+	std::shared_ptr<sf::Text> text_, std::function<void()> func_)
+	: widget(sf::Vector2f(pos), nullptr), text(text_), func(func_), zone_color(zone_color_),
+	interact_zone(sf::Vector2f(0, 0)){
+	interact_zone.setSize(context_entity::size);
+	this->reset_color();
+}
+
+void context_entity::update(game_window *win) noexcept{
+	auto update_func = [this, win](
+		auto &obj, sf::Vector2f offset = sf::Vector2f(0, 0)){
+
+		obj.setScale(win->get_scale(), -win->get_scale());
+		obj.setPosition((this->position + win->get_position() + offset)
+			* win->get_scale());
+	};
+
+	update_func(this->interact_zone);
+	update_func(*this->text, sf::Vector2f(3, 3));
+}
+
+bool context_entity::interact(game_window *win, sf::Vector2f pos, sf::Event event){
+	if(is_inside(this->interact_zone, pos)){
+		this->interact_zone.setFillColor(this->zone_color);
+		if((event.mouseButton.button == sf::Mouse::Button::Left)
+			&& (event.type == sf::Event::MouseButtonReleased)){
+			this->func();
+			return true;
+		}
+		return false;
+	} else {
+		this->reset_color();
+		return false;
+	}
+}
+
+void context_entity::draw(sf::RenderWindow *window){
+	if(interact_zone.getFillColor().a != 0){
+		window->draw(this->interact_zone);
+	}
+	if(this->text){
+		window->draw(*this->text);
+	}
+}
+
+
 context_menu::context_menu(sf::Vector2f position,
 	std::map<std::string, sf::Sprite> *sprites,
 	deferred_deletion_container<sf::Text> *text_delete_contaier)
-	: widget(position, sprites), main_zone(sf::Vector2f(100, 100)){
+	: widget(position, sprites), main_zone(sf::Vector2f(100, 100)),
+	chosen_color(sf::Color(207, 207, 207)){
 	main_zone.setPosition(position);
+	main_zone.setFillColor(sf::Color(107, 107, 107));
+	main_zone.setOutlineThickness(1);
+	main_zone.setOutlineColor(sf::Color(207, 207, 207));
 }
 
 void context_menu::update(game_window *win) noexcept{
@@ -345,26 +395,38 @@ void context_menu::update(game_window *win) noexcept{
 	};
 
 	update_func(this->main_zone);
+	for(auto &entity : entities){
+		entity.update(win);
+	}
 }
 
 bool context_menu::interact(game_window *win, sf::Vector2f pos, sf::Event event){
-	if(is_inside(this->main_zone, pos)
-		&& (event.mouseButton.button == sf::Mouse::Button::Left)
-		&& (event.type == sf::Event::MouseButtonReleased)){
-
-		std::cerr << "context_menu::interact" << std::endl;
-		func();	// TEST, TO DO
-
-		return true;
-	} else
+	if(is_inside(this->main_zone, pos)){
+		for(auto &entity : entities){
+			if(entity.interact(win, pos, event))
+				return true;
+		}
 		return false;
+	} else {
+		for(auto &entity : entities){
+			entity.reset_color();
+		}
+		return false;
+	}
 }
 
 void context_menu::draw(sf::RenderWindow *window){
 	window->draw(this->main_zone);
+	for(auto &entity : entities){
+		entity.draw(window);
+	}
 }
 
 void context_menu::add_entity(
 	std::shared_ptr<sf::Text> text, std::function<void()> func_){
-	func = func_;			// TEST, TO DO add entity
+	entities.emplace_back(sf::Vector2f(main_zone.getPosition()) +
+		sf::Vector2f(0, -context_entity::size.y * this->entities.size()),
+		chosen_color, text, func_);
+	main_zone.setSize(sf::Vector2f(context_entity::size.x,
+		context_entity::size.y * this->entities.size()));
 }

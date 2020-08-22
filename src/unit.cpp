@@ -653,13 +653,24 @@ public:
 			auto c_menu = context_menu(pos / window_->get_scale() - window_->get_position(),
 				sprites, text_delete_contaier);
 
-			//	TO DO current garage entities
-			c_menu.add_entity(std::shared_ptr<sf::Text>{}, [part_ptr_, item_db_ptr_,
-				text_delete_contaier, garage_ptr_, box](){
-				part_ptr_->add_item(garage_ptr_->take_item(item_db_ptr_,
-					text_delete_contaier, part_ptr_, 0));
-				box->refresh();
-			});
+			auto &items = garage_ptr_->get_content();
+			for(auto &item : items){
+				auto info = item_db_ptr_->info(item.first);
+				std::string msg = std::to_string(item.second) + " " + info.name
+					+ " w:" + std::to_string((int)info.weight)
+					+ " s:" + std::to_string(info.slots);
+				std::shared_ptr<sf::Text> text =
+					create_text(text_delete_contaier, msg, get_font(), 20);
+				//TO DO set color
+				c_menu.add_entity(text, [part_ptr_, item_db_ptr_, item,
+					text_delete_contaier, garage_ptr_, box](){
+					if(!part_ptr_->add_item(garage_ptr_->take_item(item_db_ptr_,
+						text_delete_contaier, part_ptr_, item.first))){
+						garage_ptr_->put_item(item.first, 1);
+					}
+					box->refresh();
+				});
+			}
 
 			window_->replace_context_menu(c_menu);
 		};

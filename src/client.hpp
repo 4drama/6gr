@@ -111,13 +111,13 @@ sf::Vector2f draw_position(const cell *cell_ptr, const client *client_ptr) noexc
 
 template<typename bounds_type>
 bool is_inside(bounds_type bounds, sf::Vector2f pos){
-	sf::FloatRect rect = bounds.getGlobalBounds();
-
-	if((rect.left <= pos.x) && ((rect.left + rect.width) >= pos.x) &&
-		(rect.top <= pos.y) && ((rect.top + rect.height) >= pos.y))
-		return true;
-	else
-		return false;
+	sf::FloatRect rect;
+	if constexpr(std::is_same<bounds_type, sf::FloatRect>::value){
+		rect = bounds;
+	} else {
+		rect = bounds.getGlobalBounds();
+	}
+	return rect.contains(pos);
 }
 
 inline bool client::is_visable(uint32_t cell_index) const{

@@ -36,13 +36,15 @@ private:
 class garage{
 	using quantity_type = uint32_t;
 	using id_type = uint32_t;
-
 public:
 	void put_item(id_type id, quantity_type quantity);
 
 	std::shared_ptr<item> take_item(item_db *item_db_ptr,
 		deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr, id_type id);
+
+	const std::map<id_type, quantity_type>& get_content() const noexcept{
+		return this->items;};
 private:
 	std::map<id_type, quantity_type> items;
 };
