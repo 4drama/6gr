@@ -992,7 +992,16 @@ void player_respawn(game_info *info, client *client){
 
 	info->map[spawn_cell_index].unit = mech;
 	info->players[player_index].units.emplace_back(mech);
-	info->players[player_index].garage.put_item(0, 99);		// TO DO other items
+
+	info->players[player_index].garage.put_item((int)items_id::ROCKET_BASE, 99);
+	info->players[player_index].garage.put_item((int)items_id::RADIATOR_75, 99);
+	info->players[player_index].garage.put_item((int)items_id::ACCUM_50, 99);
+	info->players[player_index].garage.put_item((int)items_id::LEGS_BASE, 99);
+	info->players[player_index].garage.put_item((int)items_id::ENGINE_BASE, 99);
+	info->players[player_index].garage.put_item((int)items_id::TANK_BASE, 99);
+	info->players[player_index].garage.put_item((int)items_id::COOLING_BASE, 99);
+	info->players[player_index].garage.put_item((int)items_id::RADIATOR_200, 99);
+	info->players[player_index].garage.put_item((int)items_id::ACCUM_100, 99);
 
 	for(auto &unit : info->players[player_index].units)
 		unit->open_vision(info, player_index);

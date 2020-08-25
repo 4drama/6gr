@@ -209,6 +209,8 @@ public:
 
 	bool try_spend(const mech_status &status) noexcept;
 	bool try_loading_torpedo(weapon* weapon_ptr);
+	
+	void refresh();
 private:
 	static const std::string filename;
 	deferred_deletion_container<sf::Text> text_delete_contaier;
@@ -234,7 +236,6 @@ private:
 
 	item_shape prepare_shape(client *client) const;
 	item_shape prepare_gui_shape(game_info *info, client *client);
-	void refresh();
 
 	float move_calculate(float time, terrain_en ter_type) noexcept override;
 };

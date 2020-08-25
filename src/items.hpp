@@ -252,7 +252,8 @@ class legs : public item, public turn_on{
 
 	static void load_sprites();
 public:
-	legs(const part_of_mech *part_ptr, std::string name);
+	legs(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		const part_of_mech *part_ptr, std::string name, float weight, uint32_t slots);
 	inline legs* is_legs() noexcept override {	return this;};
 
 	inline float get_speed(terrain_en ter_type) const noexcept{
@@ -289,7 +290,8 @@ class engine : public item, public change_mech_status, public turn_on{
 	static void load_sprites();
 public:
 	engine(deferred_deletion_container<sf::Text> *text_delete_contaier,
-		const part_of_mech *part_ptr, std::string name, int threshold);
+		const part_of_mech *part_ptr, std::string name,
+		float weight, uint32_t slots, int threshold);
 	inline engine* is_engine() noexcept override {return this;};
 
 	mech_status get_mech_changes(float time, const mech_status &status) const noexcept override;
@@ -323,7 +325,9 @@ class cooling_system : public item, public change_mech_status, public turn_on {
 
 	static void load_sprites();
 public:
-	cooling_system(const part_of_mech *part_ptr, std::string name, float heat_efficiency, float energy_consumption);
+	cooling_system(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		const part_of_mech *part_ptr, std::string name,
+		float weight, uint32_t slots, float heat_efficiency, float energy_consumption);
 	mech_status get_mech_changes(float time, const mech_status &status) const noexcept override;
 	item_shape get_draw_shape(const mech* owner, client *client,
 		const sf::Vector2f& position) override;
@@ -334,7 +338,9 @@ private:
 
 class accumulator : public item, public capacity_change{
 public:
-	accumulator(const part_of_mech *part_ptr, std::string name, float capacity_);
+	accumulator(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		const part_of_mech *part_ptr, std::string name,
+		float weight, uint32_t slots, float capacity_);
 	mech_status get() const noexcept;
 private:
 	float capacity = 0;
@@ -342,7 +348,9 @@ private:
 
 class radiator : public item, public capacity_change{
 public:
-	radiator(const part_of_mech *part_ptr, std::string name, float capacity_);
+	radiator(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		const part_of_mech *part_ptr, std::string name,
+		float weight, uint32_t slots, float capacity_);
 	mech_status get() const noexcept;
 private:
 	float capacity = 0;
@@ -350,7 +358,9 @@ private:
 
 class tank : public item, public capacity_change{
 public:
-	tank(const part_of_mech *part_ptr, std::string name, float capacity_);
+	tank(deferred_deletion_container<sf::Text> *text_delete_contaier,
+		const part_of_mech *part_ptr, std::string name,
+		float weight, uint32_t slots, float capacity_);
 	mech_status get() const noexcept;
 private:
 	float capacity = 0;

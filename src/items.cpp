@@ -449,8 +449,9 @@ void engine::load_sprites(){
 };
 
 engine::engine(deferred_deletion_container<sf::Text> *text_delete_contaier,
-	const part_of_mech *part_ptr, std::string name, int threshold_ = 0)
-	: item(part_ptr, name, 30, 5), performance{60.0f, 60.0f, 0.3f},
+	const part_of_mech *part_ptr, std::string name,
+	float weight, uint32_t slots, int threshold_ = 0)
+	: item(part_ptr, name, weight, slots), performance{60.0f, 60.0f, 0.3f},
 		threshold(threshold_),
 		threshold_text_ptr(
 			create_text(text_delete_contaier, std::string("threshold"), get_font(), 20)),
@@ -517,8 +518,10 @@ item_shape engine::get_draw_shape(const mech* owner, client *client,
 	return shape;
 }
 
-legs::legs(const part_of_mech *part_ptr, std::string name)
-	: item(part_ptr, name, 20, 5), modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
+legs::legs(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const part_of_mech *part_ptr, std::string name, float weight, uint32_t slots)
+	: item(part_ptr, name, weight, slots),
+	modes{{0.3f, -2, 1}, {1.0f, -10, 5}, {3.0f, -70, 10}}{
 
 	if(legs::sprites.empty())
 		legs::load_sprites();
@@ -585,9 +588,10 @@ void cooling_system::load_sprites(){
 	cooling_system::sprites["picture"].setPosition(17, 0);
 }
 
-cooling_system::cooling_system(const part_of_mech *part_ptr,
-	std::string name_, float heat_efficiency_, float energy_consumption_)
-	: item(part_ptr, name_, 5, 2), heat_efficiency(heat_efficiency_),
+cooling_system::cooling_system(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const part_of_mech *part_ptr, std::string name_, float weight, uint32_t slots,
+	float heat_efficiency_, float energy_consumption_)
+	: item(part_ptr, name_, weight, slots), heat_efficiency(heat_efficiency_),
 	energy_consumption(energy_consumption_){
 	if(cooling_system::sprites.empty())
 		cooling_system::load_sprites();
@@ -616,24 +620,30 @@ item_shape cooling_system::get_draw_shape(const mech* owner, client *client,
 
 }
 
-accumulator::accumulator(const part_of_mech *part_ptr, std::string name, float capacity_)
-	: item(part_ptr, name, 5, 2), capacity(capacity_){
+accumulator::accumulator(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const part_of_mech *part_ptr, std::string name,
+	float weight, uint32_t slots, float capacity_)
+	: item(part_ptr, name, weight, slots), capacity(capacity_){
 };
 
 mech_status accumulator::get() const noexcept{
 	return mech_status::capacity(this->capacity, 0, 0);
 }
 
-radiator::radiator(const part_of_mech *part_ptr, std::string name, float capacity_)
-	: item(part_ptr, name, 5, 2), capacity(capacity_){
+radiator::radiator(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const part_of_mech *part_ptr, std::string name,
+	float weight, uint32_t slots, float capacity_)
+	: item(part_ptr, name, weight, slots), capacity(capacity_){
 };
 
 mech_status radiator::get() const noexcept{
 	return mech_status::capacity(0, this->capacity, 0);
 }
 
-tank::tank(const part_of_mech *part_ptr, std::string name, float capacity_)
-	: item(part_ptr, name, 5, 2), capacity(capacity_){
+tank::tank(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const part_of_mech *part_ptr, std::string name,
+	float weight, uint32_t slots, float capacity_)
+	: item(part_ptr, name, weight, slots), capacity(capacity_){
 };
 
 mech_status tank::get() const noexcept{

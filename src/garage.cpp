@@ -2,14 +2,29 @@
 
 #include "items.hpp"
 
-item_db::item_db(){
-	db[0] = item_info{"Rocket", 10, 3, [info = &db[0]](
+template<typename item_type, typename ...Args>
+void item_db::add(items_id id, std::string name, float weight,
+	uint32_t slots, Args... args){
+
+	this->db[(int)id] = item_info{name, weight, slots, [info = &db[(int)id], args...](
 		deferred_deletion_container<sf::Text>* text_delete_contaier,
 		const part_of_mech* part_ptr) -> std::shared_ptr<item>{
-		return std::make_shared<weapon>(text_delete_contaier,
-			part_ptr, info->name, info->weight, info->slots, 15000);
-	}};
-	// TO DO other items
+		return std::make_shared<item_type>(text_delete_contaier,
+			part_ptr, info->name, info->weight, info->slots, args...);
+	}};;
+};
+
+item_db::item_db(){
+	this->add<weapon>(items_id::ROCKET_BASE, "Rocket", 10, 3, 15000);
+	this->add<radiator>(items_id::RADIATOR_75, "Radiator", 5, 2, 75);
+	this->add<accumulator>(items_id::ACCUM_50, "Accumulator", 5, 2, 50);
+	this->add<legs>(items_id::LEGS_BASE, "Legs", 20, 5);
+	this->add<engine>(items_id::ENGINE_BASE, "Engine", 30, 5, 70);
+	this->add<tank>(items_id::TANK_BASE, "Tank", 5, 2, 20);
+	this->add<cooling_system>(items_id::COOLING_BASE, "Cooling system", 5, 2, 10.0f, 1.25f);
+
+	this->add<radiator>(items_id::RADIATOR_200, "Radiator2", 10, 3, 200);
+	this->add<accumulator>(items_id::ACCUM_100, "Accumulator2", 10, 3, 100);
 }
 
 void garage::put_item(id_type id, quantity_type quantity){

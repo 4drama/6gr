@@ -11,6 +11,20 @@
 class item;
 class part_of_mech;
 
+enum class items_id{
+	ROCKET_BASE,
+	RADIATOR_75,
+	ACCUM_50,
+	LEGS_BASE,
+	ENGINE_BASE,
+	TANK_BASE,
+	COOLING_BASE,
+
+
+	RADIATOR_200,
+	ACCUM_100,
+};
+
 struct item_info{
 	std::string name;
 	float weight;
@@ -31,6 +45,10 @@ public:
 	item_info info(id_type id);
 private:
 	std::map<id_type, item_info> db;
+
+	template<typename item_type, typename ...Args>
+	void add(items_id id, std::string name, float weight, uint32_t slots, Args... args);
+
 };
 
 class garage{

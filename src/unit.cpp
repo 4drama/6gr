@@ -155,7 +155,7 @@ void mech::load_sprites(){
 mech::mech(uint32_t cell_index_, item_db *item_db_ptr)
 	: unit(cell_index_, 4),
 	left_arm(60, 25, 7, 2.0f),
-	torso(120, 80, 18, 1.0f),
+	torso(120, 80, 20, 1.0f),
 	right_arm(60, 25, 7, 2.0f),
 	energy_text("energy_value", get_font(), 22),
 	heat_text("heat_value", get_font(), 22),
@@ -173,22 +173,31 @@ mech::mech(uint32_t cell_index_, item_db *item_db_ptr)
 			60, 60, 0, 0));
 
 	this->left_arm.add_item(item_db_ptr->create(&this->text_delete_contaier,
-			&this->right_arm, 0));		// TO DO other items
-	this->left_arm.add_item(std::make_shared<radiator>(&this->left_arm, "Radiator", 75));
-	this->left_arm.add_item(std::make_shared<accumulator>(&this->left_arm, "Accumulator", 50));
+			&this->left_arm, (int)items_id::ROCKET_BASE));
+	this->left_arm.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->left_arm, (int)items_id::RADIATOR_75));
+	this->left_arm.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->left_arm, (int)items_id::ACCUM_50));
 
-//	this->right_arm.add_item(std::make_shared<weapon>(&this->text_delete_contaier,
-//		&this->right_arm, "Rocket", 15000));
-	this->right_arm.add_item(std::make_shared<radiator>(&this->right_arm, "Radiator", 75));
-	this->right_arm.add_item(std::make_shared<accumulator>(&this->right_arm, "Accumulator", 50));
+	this->right_arm.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->right_arm, (int)items_id::ROCKET_BASE));
+	this->right_arm.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->right_arm, (int)items_id::RADIATOR_75));
+	this->right_arm.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->right_arm, (int)items_id::ACCUM_50));
 
-	this->torso.add_item(std::make_shared<legs>(&this->torso, "Legs"));
-	this->torso.add_item(std::make_shared<engine>(&this->text_delete_contaier,
-		&this->torso, "Engine", 70));
-	this->torso.add_item(std::make_shared<tank>(&this->torso, "Tank", 20));
-	this->torso.add_item(std::make_shared<radiator>(&this->torso, "Radiator", 200));
-	this->torso.add_item(std::make_shared<accumulator>(&this->torso, "Accumulator", 100));
-	this->torso.add_item(std::make_shared<cooling_system>(&this->torso, "Cooling system", 10.0f, 1.25f));
+	this->torso.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->torso, (int)items_id::LEGS_BASE));
+	this->torso.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->torso, (int)items_id::ENGINE_BASE));
+	this->torso.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->torso, (int)items_id::TANK_BASE));
+	this->torso.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->torso, (int)items_id::RADIATOR_200));
+	this->torso.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->torso, (int)items_id::ACCUM_100));
+	this->torso.add_item(item_db_ptr->create(&this->text_delete_contaier,
+			&this->torso, (int)items_id::COOLING_BASE));
 
 	this->refresh();
 	this->calculate_status(mech_status::current(0, 0, 20));
@@ -638,8 +647,8 @@ class new_layout_item_f : public content_box_widget{
 	}
 public:
 	new_layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
-		std::map<std::string, sf::Sprite> *sprites,
-		float offset, item_db *item_db_ptr_, part_of_mech *part_ptr_, garage *garage_ptr_,
+		std::map<std::string, sf::Sprite> *sprites, float offset,
+		item_db *item_db_ptr_, mech *mech_ptr, part_of_mech *part_ptr_, garage *garage_ptr_,
 		game_window* window_, content_box* box)
 		: content_box_widget(sf::Vector2f(0, offset), sprites){
 		if(sprites->find("layout_items_new") == sprites->end()){
@@ -648,7 +657,7 @@ public:
 
 		this->new_item_sprite = (*sprites)["layout_items_new"];
 		create_context_menu_func = [text_delete_contaier, sprites, window_, box,
-			item_db_ptr_, part_ptr_, garage_ptr_]
+			item_db_ptr_, mech_ptr, part_ptr_, garage_ptr_]
 			(sf::Vector2f pos){
 			auto c_menu = context_menu(pos / window_->get_scale() - window_->get_position(),
 				sprites, text_delete_contaier);
@@ -662,12 +671,13 @@ public:
 				std::shared_ptr<sf::Text> text =
 					create_text(text_delete_contaier, msg, get_font(), 20);
 				//TO DO set color
-				c_menu.add_entity(text, [part_ptr_, item_db_ptr_, item,
+				c_menu.add_entity(text, [mech_ptr, part_ptr_, item_db_ptr_, item,
 					text_delete_contaier, garage_ptr_, box](){
 					if(!part_ptr_->add_item(garage_ptr_->take_item(item_db_ptr_,
 						text_delete_contaier, part_ptr_, item.first))){
 						garage_ptr_->put_item(item.first, 1);
 					}
+					mech_ptr->refresh();
 					box->refresh();
 				});
 			}
@@ -743,7 +753,7 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		}
 		part_widget->add_widget(std::make_shared<new_layout_item_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			foffset, item_db_ptr, part, garage_ptr, window_ptr, part_widget));
+			foffset, item_db_ptr, mech_ptr, part, garage_ptr, window_ptr, part_widget));
 	};
 	part_widget->set_refresh_func(refresh_func);
 	part_widget->refresh();
