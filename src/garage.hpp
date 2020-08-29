@@ -26,6 +26,11 @@ enum class items_id{
 };
 
 struct item_info{
+	enum class special_type{
+		NONE,
+		ENGINE,
+		LEGS
+	} special = special_type::NONE;
 	std::string name;
 	float weight;
 	uint32_t slots;

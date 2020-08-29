@@ -6,10 +6,11 @@ template<typename item_type, typename ...Args>
 void item_db::add(items_id id, std::string name, float weight,
 	uint32_t slots, Args... args){
 
-	this->db[(int)id] = item_info{name, weight, slots, [info = &db[(int)id], args...](
+	this->db[(int)id] = item_info{item_type::special, name, weight, slots,
+		[id, info = &db[(int)id], args...](
 		deferred_deletion_container<sf::Text>* text_delete_contaier,
 		const part_of_mech* part_ptr) -> std::shared_ptr<item>{
-		return std::make_shared<item_type>(text_delete_contaier,
+		return std::make_shared<item_type>((int)id, text_delete_contaier,
 			part_ptr, info->name, info->weight, info->slots, args...);
 	}};;
 };

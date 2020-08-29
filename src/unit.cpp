@@ -152,11 +152,26 @@ void mech::load_sprites(){
 	sprites["window_layout_close"].setPosition(0, 0);
 }
 
+namespace{
+
+std::map<item_info::special_type, int> zero_spetials_f(){
+	return std::map<item_info::special_type, int>();
+};
+
+std::map<item_info::special_type, int> one_engine_leg_spetials_f(){
+	std::map<item_info::special_type, int> result{};
+	result[item_info::special_type::LEGS] = 1;
+	result[item_info::special_type::ENGINE] = 1;
+	return result;
+};
+
+};
+
 mech::mech(uint32_t cell_index_, item_db *item_db_ptr)
 	: unit(cell_index_, 4),
-	left_arm(60, 25, 7, 2.0f),
-	torso(120, 80, 20, 1.0f),
-	right_arm(60, 25, 7, 2.0f),
+	left_arm(60, 25, 7, zero_spetials_f(), 2.0f),
+	torso(120, 80, 20, one_engine_leg_spetials_f(), 1.0f),
+	right_arm(60, 25, 7, zero_spetials_f(), 2.0f),
 	energy_text("energy_value", get_font(), 22),
 	heat_text("heat_value", get_font(), 22),
 	fuel_text("fuel_text", get_font(), 22){
@@ -207,10 +222,10 @@ float mech::get_speed(terrain_en ter_type) const noexcept{
 	return legs_ptr ? legs_ptr->get_speed(ter_type) : 0;
 };
 
-part_of_mech::part_of_mech(float durability_,
-	float weight_, uint32_t slots_, float priority_)
+part_of_mech::part_of_mech(float durability_, float weight_, uint32_t slots_,
+	std::map<item_info::special_type, int> spetials_, float priority_)
 	: durability(durability_), max_durability(durability_),
-	status(mech_status::zero()), priority(priority_), limits{weight_, slots_},
+	status(mech_status::zero()), priority(priority_), limits{weight_, slots_, spetials_},
 	durability_text("durability_value", get_font(), 22){
 }
 
@@ -221,13 +236,35 @@ void part_of_mech::prepare_for_refresh() noexcept{
 	this->slots = 0;
 }
 
+bool part_of_mech::item_validate(item_info info) const noexcept{
+
+	bool specials_slots = false;
+	if(info.special != item_info::special_type::NONE){
+		specials_slots =
+			(this->limits.specials[info.special] - this->specials[info.special]) > 0;
+	} else
+		specials_slots = true;
+
+	if(((this->limits.weight - this->weight) >= info.weight) &&
+		((this->limits.slots - this->slots) >= info.slots) &&
+		(specials_slots)){
+		return true;
+	} else
+		return false;
+};
+
 bool part_of_mech::add_item(std::shared_ptr<item> item){
+	// TO DO special check
 	if(((this->weight + item->get_weight()) <= this->limits.weight) &&
 		((this->slots + item->get_slots()) <= this->limits.slots)){
 
 		this->items.emplace_back(item);
 		this->weight += item->get_weight();
 		this->slots += item->get_slots();
+		if(item->get_special() != item_info::special_type::NONE){
+			++this->specials[item->get_special()];
+		}
+
 		return true;
 	} else {
 		std::cerr << "Can't add item: " << item->get_name() << ". "
@@ -239,6 +276,9 @@ bool part_of_mech::add_item(std::shared_ptr<item> item){
 };
 
 bool part_of_mech::delete_item(std::shared_ptr<item> dell_item){
+	if(dell_item->get_special() != item_info::special_type::NONE){
+		--this->specials[dell_item->get_special()];
+	}
 	this->items.remove(dell_item);
 }
 
@@ -540,8 +580,9 @@ class layout_item_f : public content_box_widget{
 public:
 	layout_item_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
 		std::map<std::string, sf::Sprite> *sprites,
-		float offset, std::shared_ptr<item> item_, mech *mech_ptr_)
-		: content_box_widget(sf::Vector2f(0, offset), sprites), item(item_), mech_ptr(mech_ptr_),
+		float offset, std::shared_ptr<item> item_, mech *mech_ptr_, garage *garage_ptr_)
+		: content_box_widget(sf::Vector2f(0, offset), sprites),
+		item(item_), mech_ptr(mech_ptr_), garage_ptr(garage_ptr_),
 		name_text(create_text(text_delete_contaier, item_->get_name(), get_font(), 20)),
 		slot_text(create_text(text_delete_contaier,
 			std::to_string(item_->get_slots()), get_font(), 20)){
@@ -596,7 +637,11 @@ public:
 		 	&& (event.mouseButton.button == sf::Mouse::Button::Left)
 			&& (event.type == sf::Event::MouseButtonReleased)){
 
-			mech_ptr->delete_item(item.lock());
+			auto item_ptr = item.lock();
+			uint32_t id = item_ptr->get_id();
+			mech_ptr->delete_item(item_ptr);
+			garage_ptr->put_item(id, 1);
+
 			box->refresh();
 			return true;
 		} else
@@ -623,6 +668,7 @@ public:
 private:
 	std::weak_ptr<item> item;
 	mech *mech_ptr;
+	garage *garage_ptr;
 
 	std::shared_ptr<sf::Text> name_text;
 	std::shared_ptr<sf::Text> slot_text;
@@ -670,7 +716,10 @@ public:
 					+ " s:" + std::to_string(info.slots);
 				std::shared_ptr<sf::Text> text =
 					create_text(text_delete_contaier, msg, get_font(), 20);
-				//TO DO set color
+				if(!part_ptr_->item_validate(info)){
+					text->setColor(sf::Color(220, 25, 25));
+				}
+
 				c_menu.add_entity(text, [mech_ptr, part_ptr_, item_db_ptr_, item,
 					text_delete_contaier, garage_ptr_, box](){
 					if(!part_ptr_->add_item(garage_ptr_->take_item(item_db_ptr_,
@@ -745,7 +794,7 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		for(auto &item_ptr : part->items){
 			auto widget = std::make_shared<layout_item_f>(
 				client->get_delete_contaier(), game_window::get_sprite_ptr(),
-				foffset, item_ptr, mech_ptr);
+				foffset, item_ptr, mech_ptr, garage_ptr);
 
 			part_widget->add_widget(widget);
 			foffset -= widget->get_size();

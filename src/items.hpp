@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "garage.hpp"
 #include "map.hpp"
 #include "deletion_container.hpp"
 
@@ -131,7 +132,14 @@ public:
 
 class item : public virtual item_base, std::enable_shared_from_this<item>{
 public:
-	item(const part_of_mech *part_ptr, std::string name, float weight, uint32_t slots);
+	const static item_info::special_type special = item_info::special_type::NONE;
+	virtual item_info::special_type get_special() const noexcept{
+		return item::special;};
+
+	item(uint32_t id, const part_of_mech *part_ptr,
+		std::string name, float weight, uint32_t slots);
+
+	uint32_t get_id() const noexcept{return this->id;};
 
 	inline const std::string& get_name() const noexcept{ return this->name;};
 	inline virtual void update(mech* owner, float time){};
@@ -141,6 +149,7 @@ public:
 
 	bool is_working() const noexcept;
 private:
+	uint32_t id;
 	std::string name;
 
 	float weight = 0;
@@ -162,7 +171,7 @@ public:
 
 	inline weapon* is_weapon() noexcept override {return this;};
 
-	weapon(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	weapon(uint32_t id, deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr,
 		std::string name, float weight, uint32_t slots, float delay);
 	void update(mech* owner, float time) override;
@@ -252,7 +261,11 @@ class legs : public item, public turn_on{
 
 	static void load_sprites();
 public:
-	legs(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const static item_info::special_type special = item_info::special_type::LEGS;
+	virtual item_info::special_type get_special() const noexcept override{
+		return legs::special;};
+
+	legs(uint32_t id, deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr, std::string name, float weight, uint32_t slots);
 	inline legs* is_legs() noexcept override {	return this;};
 
@@ -289,7 +302,11 @@ class engine : public item, public change_mech_status, public turn_on{
 
 	static void load_sprites();
 public:
-	engine(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	const static item_info::special_type special = item_info::special_type::ENGINE;
+	virtual item_info::special_type get_special() const noexcept override{
+		return engine::special;};
+
+	engine(uint32_t id, deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr, std::string name,
 		float weight, uint32_t slots, int threshold);
 	inline engine* is_engine() noexcept override {return this;};
@@ -325,7 +342,7 @@ class cooling_system : public item, public change_mech_status, public turn_on {
 
 	static void load_sprites();
 public:
-	cooling_system(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	cooling_system(uint32_t id, deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr, std::string name,
 		float weight, uint32_t slots, float heat_efficiency, float energy_consumption);
 	mech_status get_mech_changes(float time, const mech_status &status) const noexcept override;
@@ -338,7 +355,7 @@ private:
 
 class accumulator : public item, public capacity_change{
 public:
-	accumulator(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	accumulator(uint32_t id, deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr, std::string name,
 		float weight, uint32_t slots, float capacity_);
 	mech_status get() const noexcept;
@@ -348,7 +365,7 @@ private:
 
 class radiator : public item, public capacity_change{
 public:
-	radiator(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	radiator(uint32_t id, deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr, std::string name,
 		float weight, uint32_t slots, float capacity_);
 	mech_status get() const noexcept;
@@ -358,7 +375,7 @@ private:
 
 class tank : public item, public capacity_change{
 public:
-	tank(deferred_deletion_container<sf::Text> *text_delete_contaier,
+	tank(uint32_t id, deferred_deletion_container<sf::Text> *text_delete_contaier,
 		const part_of_mech *part_ptr, std::string name,
 		float weight, uint32_t slots, float capacity_);
 	mech_status get() const noexcept;

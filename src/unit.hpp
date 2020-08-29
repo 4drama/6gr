@@ -156,10 +156,15 @@ bool is_store(const std::pair<mech_status::type, float> &val);
 inline bool is_spend(const std::pair<mech_status::type, float> &val){ return !is_store(val);}
 
 struct part_of_mech{
-	part_of_mech(float durability, float weight, uint32_t slots, float priority);
+	part_of_mech(float durability, float weight, uint32_t slots,
+		std::map<item_info::special_type, int> specials, float priority);
 	void prepare_for_refresh() noexcept;
+
 	bool add_item(std::shared_ptr<item> item);
 	bool delete_item(std::shared_ptr<item> item);
+
+	bool item_validate(item_info info) const noexcept;
+
 	void validate();
 
 	float durability = 30;
@@ -173,10 +178,12 @@ struct part_of_mech{
 
 	float weight = 0;
 	uint32_t slots = 0;
+	mutable std::map<item_info::special_type, int> specials;
 
 	struct{
 		float weight;
 		uint32_t slots;
+		mutable std::map<item_info::special_type, int> specials;
 	} limits;
 };
 
@@ -209,7 +216,7 @@ public:
 
 	bool try_spend(const mech_status &status) noexcept;
 	bool try_loading_torpedo(weapon* weapon_ptr);
-	
+
 	void refresh();
 private:
 	static const std::string filename;
