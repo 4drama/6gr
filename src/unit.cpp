@@ -236,27 +236,33 @@ void part_of_mech::prepare_for_refresh() noexcept{
 	this->slots = 0;
 }
 
-bool part_of_mech::item_validate(item_info info) const noexcept{
+namespace{
 
+bool specials_check_f(const part_of_mech *part, item_info::special_type special){
 	bool specials_slots = false;
-	if(info.special != item_info::special_type::NONE){
+	if(special != item_info::special_type::NONE){
 		specials_slots =
-			(this->limits.specials[info.special] - this->specials[info.special]) > 0;
+			(part->limits.specials[special] - part->specials[special]) > 0;
 	} else
 		specials_slots = true;
+	return specials_slots;
+}
 
+}
+
+bool part_of_mech::item_validate(item_info info) const noexcept{
 	if(((this->limits.weight - this->weight) >= info.weight) &&
 		((this->limits.slots - this->slots) >= info.slots) &&
-		(specials_slots)){
+		(specials_check_f(this, info.special))){
 		return true;
 	} else
 		return false;
 };
 
 bool part_of_mech::add_item(std::shared_ptr<item> item){
-	// TO DO special check
 	if(((this->weight + item->get_weight()) <= this->limits.weight) &&
-		((this->slots + item->get_slots()) <= this->limits.slots)){
+		((this->slots + item->get_slots()) <= this->limits.slots) &&
+		(specials_check_f(this, item->get_special()))){
 
 		this->items.emplace_back(item);
 		this->weight += item->get_weight();
@@ -276,10 +282,15 @@ bool part_of_mech::add_item(std::shared_ptr<item> item){
 };
 
 bool part_of_mech::delete_item(std::shared_ptr<item> dell_item){
-	if(dell_item->get_special() != item_info::special_type::NONE){
-		--this->specials[dell_item->get_special()];
+	for(auto it = this->items.begin(); it != this->items.end(); ++it){
+		if(*it == dell_item){
+			if(dell_item->get_special() != item_info::special_type::NONE){
+				--this->specials[dell_item->get_special()];
+			}
+			this->items.erase(it);
+		}
 	}
-	this->items.remove(dell_item);
+
 }
 
 void part_of_mech::validate(){
