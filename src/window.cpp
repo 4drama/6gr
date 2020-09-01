@@ -138,7 +138,10 @@ void content_box::update(game_window *win) noexcept{
 	this->scale = win->get_scale();
 	this->offset = win->get_position();
 
-	this->main_zone.setSize(this->size * this->scale);
+	sf::Vector2f size_ = sf::Vector2f(
+		this->size.x == 0 ? win->get_size().x : this->size.x,
+		this->size.y == 0 ? win->get_size().y : this->size.y);
+	this->main_zone.setSize(size_ * this->scale);
 	this->main_zone.setPosition((this->position + win->get_position()) * this->scale);
 
 	for(auto &widget : this->widgets){
@@ -157,8 +160,6 @@ bool content_box::interact(game_window *win, sf::Vector2f pos, sf::Event event){
 }
 
 void content_box::draw(sf::RenderWindow *window){
-//	window->draw(main_zone);
-
 	for(auto &widget : this->widgets){
 		widget->draw(window);
 	}

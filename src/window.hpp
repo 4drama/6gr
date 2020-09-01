@@ -186,6 +186,8 @@ public:
 	inline void move(sf::Vector2f offset) noexcept{ this->position += offset;};
 
 	inline const sf::Vector2f& get_size() const noexcept{return this->size;};
+	void resize(sf::Vector2f size_) noexcept{this->size = size_;};
+
 	inline const sf::Vector2f& get_position() const noexcept{return this->position;};
 	inline const float& get_scale() const noexcept{return this->scale;};
 

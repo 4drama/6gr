@@ -508,6 +508,14 @@ class layout_part_info_f : public content_box_widget{
 		(*sprites)["size_symbol"] = sf::Sprite(layout_part_info_f::texture,
 			sf::IntRect(0, 30, 30, 30));
 		(*sprites)["size_symbol"].setPosition(0, 0);
+
+		(*sprites)["legs_symbol"] = sf::Sprite(layout_part_info_f::texture,
+			sf::IntRect(0, 60, 30, 30));
+		(*sprites)["legs_symbol"].setPosition(0, 0);
+
+		(*sprites)["engine_symbol"] = sf::Sprite(layout_part_info_f::texture,
+			sf::IntRect(0, 90, 30, 30));
+		(*sprites)["engine_symbol"].setPosition(0, 0);
 	}
 public:
 	layout_part_info_f(deferred_deletion_container<sf::Text> *text_delete_contaier,
@@ -516,10 +524,14 @@ public:
 		: content_box_widget(sf::Vector2f(0, offset), sprites),
 		weight_text(create_text(text_delete_contaier, "weight_text", get_font(), 20)),
 		size_text(create_text(text_delete_contaier, "size_text", get_font(), 20)),
+		legs_text(create_text(text_delete_contaier, "legs_text", get_font(), 20)),
+		engine_text(create_text(text_delete_contaier, "engine_text", get_font(), 20)),
 		part(part_){
 
 		weight_text->setColor(sf::Color(36, 36, 36));
 		size_text->setColor(sf::Color(36, 36, 36));
+		legs_text->setColor(sf::Color(36, 36, 36));
+		engine_text->setColor(sf::Color(36, 36, 36));
 
 		if(sprites->find("tonnage_symbol") == sprites->end()){
 			layout_part_info_f::load_sprites(sprites);
@@ -527,19 +539,6 @@ public:
 	}
 
 	void update(content_box *box) noexcept override{
-		weight_text->setString(std::to_string((int)part->weight) + '/' +
-			std::to_string((int)part->limits.weight));
-		size_text->setString(std::to_string(part->slots) + '/' +
-			std::to_string(part->limits.slots));
-
-		weight_text->setScale(box->get_scale(), -box->get_scale());
-		weight_text->setPosition((this->position + box->get_position() +
-			sf::Vector2f(35, 0)) * box->get_scale());
-
-		size_text->setScale(box->get_scale(), -box->get_scale());
-		size_text->setPosition((this->position + box->get_position() +
-			sf::Vector2f(35, -35)) * box->get_scale());
-
 		auto create_sprite = [&box](const sf::Sprite &sprite,
 			sf::Vector2f scale = sf::Vector2f(1.0f, -1.0f),
 			sf::Vector2f offset = sf::Vector2f(0.0f, 0.0f)){
@@ -550,11 +549,32 @@ public:
 			return res_sprite;
 		};
 
+		float offset = 0;
+		auto add_symbol = [box, this, &offset, create_sprite]
+		(std::shared_ptr<sf::Text> text, std::string symbol, auto value, auto max_value){
+			text->setString(std::to_string((int)value) + '/' +
+				std::to_string((int)max_value));
+
+			text->setScale(box->get_scale(), -box->get_scale());
+			text->setPosition((this->position + box->get_position() +
+				sf::Vector2f(35, offset + 2)) * box->get_scale());
+
+			tmp_sprites.emplace_back(create_sprite(sprites_ptr->at(symbol),
+				sf::Vector2f(1.0f, -1.0f), sf::Vector2f(0, offset)));
+			offset -= 33;
+		};
+
 		tmp_sprites.clear();
-		tmp_sprites.emplace_back(create_sprite(sprites_ptr->at("tonnage_symbol"),
-			sf::Vector2f(1.0f, -1.0f), sf::Vector2f(0, 0)));
-		tmp_sprites.emplace_back(create_sprite(sprites_ptr->at("size_symbol"),
-			sf::Vector2f(1.0f, -1.0f), sf::Vector2f(0, -33)));
+		add_symbol(weight_text, "tonnage_symbol", part->weight, part->limits.weight);
+		add_symbol(size_text, "size_symbol", part->slots, part->limits.slots);
+		if(part->limits.specials[item_info::special_type::LEGS])
+			add_symbol(legs_text, "legs_symbol",
+				part->specials[item_info::special_type::LEGS],
+				part->limits.specials[item_info::special_type::LEGS]);
+		if(part->limits.specials[item_info::special_type::ENGINE])
+			add_symbol(engine_text, "engine_symbol",
+				part->specials[item_info::special_type::ENGINE],
+				part->limits.specials[item_info::special_type::ENGINE]);
 	};
 
 	bool interact(content_box *box, sf::Vector2f pos, sf::Event event) override{
@@ -564,14 +584,31 @@ public:
 	void draw(sf::RenderWindow *window) override{
 		window->draw(*weight_text);
 		window->draw(*size_text);
+		if(part->limits.specials[item_info::special_type::LEGS])
+			window->draw(*legs_text);
+		if(part->limits.specials[item_info::special_type::ENGINE])
+			window->draw(*engine_text);
 
 		for(auto &sprite : this->tmp_sprites){
 			window->draw(sprite);
 		}
 	};
+
+	float get_size() const noexcept{
+		float res = -66;
+		if(part->limits.specials[item_info::special_type::LEGS] != 0)
+			res -= 33;
+		if(part->limits.specials[item_info::special_type::ENGINE] != 0)
+			res -= 33;
+		return res;
+	}
+
 private:
 	std::shared_ptr<sf::Text> weight_text;
 	std::shared_ptr<sf::Text> size_text;
+
+	std::shared_ptr<sf::Text> legs_text;
+	std::shared_ptr<sf::Text> engine_text;
 
 	std::vector<sf::Sprite> tmp_sprites;
 	part_of_mech *part;
@@ -789,17 +826,22 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 
 	std::shared_ptr<content_box> part_widget =
 		std::make_shared<content_box>(game_window::get_sprite_ptr(),
-		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, -293});
+		sf::Vector2f{offset.x + 2, offset.y - 2}, sf::Vector2f{145, 0});
 
 	game_window *window_ptr = window.get();
 	auto refresh_func = [client, part, mech_ptr, garage_ptr, window_ptr,
 		item_db_ptr = &info->item_db](
 		content_box* part_widget){
-		part_widget->add_widget(std::make_shared<layout_part_info_f>(
-			client->get_delete_contaier(), game_window::get_sprite_ptr(),
-			0, part));
 
-		constexpr float info_size = -70;
+		float altitude;
+
+		std::shared_ptr<layout_part_info_f> info_ptr =
+			std::make_shared<layout_part_info_f>( client->get_delete_contaier(),
+			game_window::get_sprite_ptr(), 0, part);
+		part_widget->add_widget(info_ptr);
+
+
+		float info_size = info_ptr->get_size() - 4;
 		int i = 0;
 		float foffset = info_size;
 		for(auto &item_ptr : part->items){
@@ -814,6 +856,10 @@ void add_mech_layout_part(std::shared_ptr<game_window> window, sf::Vector2f offs
 		part_widget->add_widget(std::make_shared<new_layout_item_f>(
 			client->get_delete_contaier(), game_window::get_sprite_ptr(),
 			foffset, item_db_ptr, mech_ptr, part, garage_ptr, window_ptr, part_widget));
+		altitude = foffset - 20 - 2;
+		if(altitude <= window_ptr->get_size().y){
+			window_ptr->resize(sf::Vector2f(window_ptr->get_size().x, altitude));
+		}
 	};
 	part_widget->set_refresh_func(refresh_func);
 	part_widget->refresh();
@@ -836,7 +882,7 @@ item_shape mech::prepare_gui_shape(game_info *info, client *client){
 		gui_shape.elements.emplace_back(mech::sprites["window_layout_open"],
 			[this, info, client](){
 				auto tmp_layout_window_ptr = client->create_window("Mech layout",
-				sf::Vector2f{0, 0}, sf::Vector2f{449, 300});
+				sf::Vector2f{0, 0}, sf::Vector2f{449, 0});
 				add_mech_layout_part(tmp_layout_window_ptr, sf::Vector2f{3, 0},
 					&this->left_arm, info, client, this);
 
