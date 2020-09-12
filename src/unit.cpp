@@ -1128,6 +1128,18 @@ bool mech::try_loading_torpedo(weapon* weapon_ptr){
 		weapon_ptr->torpedo_loading(std::make_shared<explosive_torpedo>());
 }
 
+void mech::system_on(){
+	std::array<part_of_mech*, 3> parts{&this->left_arm, &this->torso, &this->right_arm};
+	for(auto &part : parts){
+		for(auto &item : part->items){
+			turn_on *is_item_ptr = item->is_turn_on();
+			if(is_item_ptr){
+				is_item_ptr->power_switch(true);
+			}
+		}
+	}
+};
+
 float mech::move_calculate(float time, terrain_en ter_type) noexcept{
 	if(!this->legs_ptr)
 		return 0;

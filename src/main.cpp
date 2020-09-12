@@ -7,6 +7,7 @@
 #include "map.hpp"
 #include "control.hpp"
 #include "gui.hpp"
+#include "ai.hpp"
 
 #include <iostream>
 #include <memory>
@@ -24,17 +25,23 @@ int main(){
 	clients.emplace_back(std::make_shared<client>(&info, 1400, 900, player_index));
 	clients.emplace_back(std::make_shared<client>(&info, 1400, 900, player_index2));
 
+	std::vector<std::shared_ptr<ai> > aies{};
+	aies.emplace_back(std::make_shared<ai>(&info, player_index));
+
 	while(true){
 		time = clock.getElapsedTime().asMilliseconds();
 		clock.restart();
 
 		for(auto& client : clients){
-
 			client->control_update(&info, time);
-			info.update(time);
-
 			client->draw(&info, time);
 		}
+
+		for(auto& ai : aies){
+			ai->update();
+		}
+
+		info.update(time);
 	}
 
 	return 0;

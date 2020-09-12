@@ -89,15 +89,13 @@ struct unit : std::enable_shared_from_this<unit>{
 		uint32_t player_index, uint32_t target_cell) noexcept;
 
 	virtual bool damage(const damage_info &damage) noexcept {return false;};
+	void update_path(game_info *info, uint32_t player_index, uint32_t target_cell);
 
 private:
 	void unit_update_move(game_info *info, uint32_t player_index, float time);
 	inline virtual void update_v(game_info *info, uint32_t player_index, float time){return ;};
 	virtual float move_calculate(float time, terrain_en ter_type) noexcept{
 		return this->get_speed(ter_type) * time;};
-
-protected:
-	void update_path(game_info *info, uint32_t player_index, uint32_t target_cell);
 };
 
 struct mech_status {
@@ -218,6 +216,20 @@ public:
 	bool try_loading_torpedo(weapon* weapon_ptr);
 
 	void refresh();
+
+
+	float get_energy_rate() const noexcept{
+		mech_status status = this->accumulate_status();
+		return status.current_energy / status.energy_capacity;
+	}
+
+	float get_heat_rate() const noexcept{
+		mech_status status = this->accumulate_status();
+		return status.current_heat / status.heat_capacity;
+	}
+
+	void system_on();
+//	void system_off();
 private:
 	static const std::string filename;
 	deferred_deletion_container<sf::Text> text_delete_contaier;
