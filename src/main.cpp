@@ -38,7 +38,7 @@ int main(){
 		}
 
 		for(auto& ai : aies){
-			ai->update();
+			ai->update(time);
 		}
 
 		info.update(time);

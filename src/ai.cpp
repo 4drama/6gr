@@ -1,61 +1,76 @@
 #include "ai.hpp"
 
-std::array< std::function<void(ai*, std::shared_ptr<unit>, ai::STATES*)>,
-	(std::size_t)ai::STATES::SIZE> ai::state_functions{};
+ai_state::ai_state(ai* ai_ptr, std::shared_ptr<unit> unit)
+	: state_ptr(std::make_shared<ai_state_init>(ai_ptr, unit)){
+}
 
-void ai::state_functions_init(){
-	static bool is_done = false;
-	if(!is_done){
-		ai::state_functions[(std::size_t)STATES::INIT] = []
-			(ai* ai_ptr, std::shared_ptr<unit> unit_ptr, STATES* state_ptr){
+void ai_state::update(float time){
+	std::shared_ptr<ai_state_base> tmp_state = this->state_ptr->update_and_get(time);
+	if(tmp_state != nullptr)
+		this->state_ptr = tmp_state;
+}
 
-			dynamic_cast<mech*>(unit_ptr.get())->system_on();
-			*state_ptr = STATES::SCOUR;
-		};
+ai_state_init::ai_state_init(ai* ai_ptr, std::shared_ptr<unit> unit_ptr)
+	: ai_state_base(ai_ptr, unit_ptr){
+}
 
-		ai::state_functions[(std::size_t)STATES::SCOUR] = []
-			(ai* ai_ptr, std::shared_ptr<unit> unit_ptr, STATES* state_ptr){
-			if(unit_ptr->path.empty()){
-				uint32_t cell_index = rand() % ai_ptr->info->map.size();
-				unit_ptr->update_path(ai_ptr->info, ai_ptr->player_index, cell_index);
-			}
+ai_state_scout::ai_state_scout(ai* ai_ptr, std::shared_ptr<unit> unit_ptr)
+	: ai_state_base(ai_ptr, unit_ptr){
+}
 
-			mech* mech_ptr = dynamic_cast<mech*>(unit_ptr.get());
-			if((mech_ptr->get_energy_rate() < 0.3) ||
-				(mech_ptr->get_heat_rate() > 0.7)){
-				*state_ptr = STATES::IDLE;
-			}
-		};
+ai_state_idle::ai_state_idle(ai* ai_ptr, std::shared_ptr<unit> unit_ptr)
+	: ai_state_base(ai_ptr, unit_ptr){
+}
 
-		ai::state_functions[(std::size_t)STATES::IDLE] = []
-			(ai* ai_ptr, std::shared_ptr<unit> unit_ptr, STATES* state_ptr){
-			mech* mech_ptr = dynamic_cast<mech*>(unit_ptr.get());
-			if(!mech_ptr->path.empty())
-				mech_ptr->path.clear();
+std::shared_ptr<ai_state_base> ai_state_init::update_and_get(float time){
+	dynamic_cast<mech*>(this->unit_ptr.get())->system_on();
+	return std::make_shared<ai_state_scout>(ai_ptr, unit_ptr);
+}
 
-			if((mech_ptr->get_energy_rate() > 0.65) &&
-				(mech_ptr->get_heat_rate() < 0.3)){
-				*state_ptr = STATES::SCOUR;
-			}
-		};
-		is_done = true;
+std::shared_ptr<ai_state_base> ai_state_scout::update_and_get(float time){
+	std::shared_ptr<ai_state_base> state_ptr = nullptr;
+
+	if(unit_ptr->path.empty()){
+		uint32_t cell_index = rand() % ai_ptr->info->map.size();
+		unit_ptr->update_path(ai_ptr->info, ai_ptr->player_index, cell_index);
 	}
+
+	mech* mech_ptr = dynamic_cast<mech*>(unit_ptr.get());
+	if((mech_ptr->get_energy_rate() < 0.3) ||
+		(mech_ptr->get_heat_rate() > 0.7)){
+		state_ptr = std::make_shared<ai_state_idle>(ai_ptr, unit_ptr);
+	}
+
+	return state_ptr;
+}
+
+
+std::shared_ptr<ai_state_base> ai_state_idle::update_and_get(float time){
+	std::shared_ptr<ai_state_base> state_ptr = nullptr;
+
+	mech* mech_ptr = dynamic_cast<mech*>(unit_ptr.get());
+	if(!mech_ptr->path.empty())
+		mech_ptr->path.clear();
+
+	if((mech_ptr->get_energy_rate() > 0.65) &&
+		(mech_ptr->get_heat_rate() < 0.3)){
+		state_ptr = std::make_shared<ai_state_scout>(ai_ptr, unit_ptr);
+	}
+
+	return state_ptr;
 }
 
 ai::ai(game_info *info_, uint32_t player_index_)
 	: info(info_), player_index(player_index_),
 	player(info_->players[player_index_]){
-	ai::state_functions_init();
 
 	for(auto &unit : this->player.units){
-		this->unit_pairs.emplace_back(unit, STATES::INIT);
+		unit_states.emplace_back(this, unit);
 	}
 };
 
-ai::update(){
-	for(auto &unit_pair : unit_pairs){
-		std::shared_ptr<unit> &unit = unit_pair.first;
-		ai::STATES* state_ptr = &unit_pair.second;
-		state_functions[(std::size_t)*state_ptr](this, unit, state_ptr);
+ai::update(float time){
+	for(auto &state : unit_states){
+		state.update(time);
 	}
 };
