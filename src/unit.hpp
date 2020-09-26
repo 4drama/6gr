@@ -66,6 +66,7 @@ private:
 
 struct unit : std::enable_shared_from_this<unit>{
 	static std::map<std::string, sf::Texture> textures;
+	uint32_t player_index;
 
 	uint32_t cell_index;
 	std::vector<sf::Sprite> sprites;
@@ -76,7 +77,7 @@ struct unit : std::enable_shared_from_this<unit>{
 	std::list<uint32_t> path;
 	float path_progress = 0;
 
-	unit(uint32_t cell_index, uint32_t vision_range);
+	unit(uint32_t player_index_, uint32_t cell_index, uint32_t vision_range);
 
 	void open_vision(game_info *info, uint32_t player_index);
 	void update(game_info *info, uint32_t player_index, float time);
@@ -191,10 +192,11 @@ class mech : public unit{
 
 	static void load_sprites();
 public:
-	static inline std::shared_ptr<mech> create(uint32_t cell_index, item_db *item_db_ptr){
-		return std::make_shared<mech>(cell_index, item_db_ptr);};
+	static inline std::shared_ptr<mech> create(
+		uint32_t player_index, uint32_t cell_index, item_db *item_db_ptr){
+		return std::make_shared<mech>(player_index, cell_index, item_db_ptr);};
 
-	mech(uint32_t cell_index, item_db *item_db_ptr);
+	mech(uint32_t player_index, uint32_t cell_index, item_db *item_db_ptr);
 
 	float get_speed(terrain_en ter_type) const noexcept override;
 

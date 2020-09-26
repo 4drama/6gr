@@ -969,9 +969,7 @@ std::vector<uint32_t> open_adjacent(game_info *info, uint32_t player_index,
 	return dst;
 }
 
-namespace{
-
-uint32_t choose_spawn_cell_f(game_info *info){
+uint32_t choose_spawn_cell(game_info *info){
 	uint32_t spawn_cell_index = 0;
 	do {
 		spawn_cell_index = rand() % info->map.size();
@@ -979,16 +977,15 @@ uint32_t choose_spawn_cell_f(game_info *info){
 	return spawn_cell_index;
 }
 
-}
-
 void player_respawn(game_info *info, client *client){
 	uint32_t player_index = client->get_player_info().get_index();
-	uint32_t spawn_cell_index = choose_spawn_cell_f(info);
+	uint32_t spawn_cell_index = choose_spawn_cell(info);
 	if(client != nullptr)
 		client->set_camera(-info->map[spawn_cell_index].pos);
 
 
-	std::shared_ptr<unit> mech = mech::create(spawn_cell_index, &info->item_db);
+	std::shared_ptr<unit> mech = mech::create(player_index,
+		spawn_cell_index, &info->item_db);
 
 	info->map[spawn_cell_index].unit = mech;
 	info->players[player_index].units.emplace_back(mech);
@@ -1113,9 +1110,6 @@ cell& game_info::get_cell(uint32_t index){
 void game_info::update(float time){
 	if(this->pause == true)
 		return ;
-
-	float time_mod[3] = {1, 2, 4};
-	time *= time_mod[this->speed];
 
 	for(uint32_t player_index = 0 ; player_index < this->players.size(); ++player_index){
 		for(auto & curr_unit : this->players[player_index].units){

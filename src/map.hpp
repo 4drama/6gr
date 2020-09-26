@@ -246,6 +246,7 @@ std::vector<uint32_t> open_adjacent(game_info *info, uint32_t player_index,
 std::list<uint32_t> get_path(game_info *info,
 	uint32_t start_cell_index, uint32_t target_cell_index, uint32_t depth);
 
+uint32_t choose_spawn_cell(game_info *info);
 /*std::list<uint32_t> get_area(game_info *info, uint32_t cell_index, uint32_t depth,
 	bool is_root = true, cardinal_directions_t main_dir = cardinal_directions_t::BEGIN);*/
 
@@ -255,6 +256,17 @@ public:
 
 	const std::list<uint32_t>& get_level(uint32_t level){return cells[level];};
 	std::list<uint32_t> combine(uint32_t start_lvl = 0, uint32_t end_lvl = UINT32_MAX);
+
+	std::list<uint32_t> filter(std::vector<bool>* map){
+		std::list<uint32_t> res{};
+		for(auto &cell : this->combine()){
+			if((*map)[cell]){
+				res.emplace_back(cell);
+			}
+		}
+		return res;
+	}
+
 private:
 	std::vector<std::list<uint32_t>> cells;
 };

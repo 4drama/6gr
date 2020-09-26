@@ -31,6 +31,9 @@ class ai_state_init : public ai_state_base{
 public:
 	ai_state_init(ai* ai_ptr, std::shared_ptr<unit> unit_ptr);
 	std::shared_ptr<ai_state_base> update_and_get(float time) override;
+private:
+	float spend_time = 0;
+	float delay;
 };
 
 class ai_state_scout : public ai_state_base{

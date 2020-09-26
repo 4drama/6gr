@@ -136,8 +136,8 @@ sf::Sprite create_sprite_f(sf::Texture *texture,
 
 }
 
-unit::unit(uint32_t cell_index_, uint32_t vision_range_)
-	: cell_index(cell_index_), vision_range(vision_range_){
+unit::unit(uint32_t player_index_, uint32_t cell_index_, uint32_t vision_range_)
+	: player_index(player_index_), cell_index(cell_index_), vision_range(vision_range_){
 }
 
 void mech::load_sprites(){
@@ -167,8 +167,8 @@ std::map<item_info::special_type, int> one_engine_leg_spetials_f(){
 
 };
 
-mech::mech(uint32_t cell_index_, item_db *item_db_ptr)
-	: unit(cell_index_, 4),
+mech::mech(uint32_t player_index_, uint32_t cell_index_, item_db *item_db_ptr)
+	: unit(player_index_, cell_index_, 4),
 	left_arm(60, 25, 7, zero_spetials_f(), 2.0f),
 	torso(120, 80, 20, one_engine_leg_spetials_f(), 1.0f),
 	right_arm(60, 25, 7, zero_spetials_f(), 2.0f),
@@ -1169,6 +1169,7 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 	if((this->cell_index == this->path.back())
 		|| (info->get_cell(this->path.front()).unit != nullptr) ){
 		this->path.clear();
+		this->path_progress = 0;
 	}
 
 	if(this->path_progress > 1){
