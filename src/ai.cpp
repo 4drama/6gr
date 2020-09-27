@@ -5,6 +5,29 @@
 #include <cstdlib>
 #include <iostream>
 
+std::list<std::shared_ptr<unit>> ai::get_viewed_enemy(
+	std::shared_ptr<unit> unit_ptr, uint32_t depth = UINT32_MAX){
+
+	std::list<std::shared_ptr<unit>> res{};
+
+	area area_around = area(this->info, unit_ptr->cell_index, depth);
+	std::vector<bool>* vision_map =
+		get_vision_map(this->info, this->player.info->get_vision_players_indeces());
+	std::list<uint32_t> seen_area = area_around.filter(vision_map);
+
+	for(auto &cell : seen_area){
+		if(this->info->map[cell].unit != nullptr){
+			uint32_t player_index = this->info->map[cell].unit->player_index;
+			if(this->player.info->relationship[player_index]
+				== player_info::relationship_type::ENEMY){
+
+				res.emplace_back(this->info->map[cell].unit);
+			}
+		}
+	}
+	return res;
+}
+
 ai_state::ai_state(ai* ai_ptr, std::shared_ptr<unit> unit)
 	: state_ptr(std::make_shared<ai_state_init>(ai_ptr, unit)){
 }
@@ -16,7 +39,7 @@ void ai_state::update(float time){
 }
 
 ai_state_init::ai_state_init(ai* ai_ptr, std::shared_ptr<unit> unit_ptr)
-	: ai_state_base(ai_ptr, unit_ptr), delay(rand() % (35 * 1000)){
+	: ai_state_base(ai_ptr, unit_ptr), delay(rand() % (600 * 1000)){
 }
 
 ai_state_scout::ai_state_scout(ai* ai_ptr, std::shared_ptr<unit> unit_ptr)
@@ -28,7 +51,7 @@ ai_state_idle::ai_state_idle(ai* ai_ptr, std::shared_ptr<unit> unit_ptr)
 }
 
 std::shared_ptr<ai_state_base> ai_state_init::update_and_get(float time){
-	if(this->spend_time > this->delay){
+	if((this->spend_time > this->delay) || (!ai_ptr->get_viewed_enemy(unit_ptr, 8).empty())){
 		dynamic_cast<mech*>(this->unit_ptr.get())->system_on();
 		return std::make_shared<ai_state_scout>(ai_ptr, unit_ptr);
 	} else {
@@ -51,27 +74,23 @@ std::shared_ptr<ai_state_base> ai_state_scout::update_and_get(float time){
 		state_ptr = std::make_shared<ai_state_idle>(ai_ptr, unit_ptr);
 	}
 
-	area area_around = area(ai_ptr->info, mech_ptr->cell_index, 8);
-	std::vector<bool>* vision_map =
-		get_vision_map(ai_ptr->info, ai_ptr->player.info->get_vision_players_indeces());
-	std::list<uint32_t> seen_area = area_around.filter(vision_map);
-	for(auto &cell : seen_area){
-		if(ai_ptr->info->map[cell].unit != nullptr){
-			uint32_t player_index = ai_ptr->info->map[cell].unit->player_index;
-			if(ai_ptr->player.info->relationship[player_index]
-				== player_info::relationship_type::ENEMY){
+	std::list<std::shared_ptr<unit>> enemy_list = ai_ptr->get_viewed_enemy(unit_ptr, 6);
+	if(!enemy_list.empty()){
+		for(auto &enemy_unit : enemy_list){
+			std::list<uint32_t> path = get_path(ai_ptr->info,
+				unit_ptr->cell_index, enemy_unit->cell_index, UINT32_MAX);
 
-				std::cerr << "enemy on " << cell << std::endl;
-				/*state = go to target;*/
-			}
+		/*	TO DO
+
+			if(in range){
+				atack
+			} else
+				go to target */
+
+			std::cerr << "Enemy on :" << enemy_unit->cell_index
+				<< ". In range: " << path.size() << std::endl;
 		}
 	}
-
-
-	/* TO DO :*/
-	/*if(seen(if_range(target)))
-		state = attak target;
-	*/
 
 	return state_ptr;
 }

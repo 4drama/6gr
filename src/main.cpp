@@ -27,8 +27,10 @@ int main(){
 
 	for(uint32_t i = 0; i < 19; ++i){
 		uint32_t spawn_cell_index = choose_spawn_cell(&info);
-		std::shared_ptr<unit> mech =
+		std::shared_ptr<mech> mech =
 			mech::create(player_index, spawn_cell_index, &info.item_db);
+		mech->fill_energy((std::rand() % 200) + 20);
+		mech->fill_heat((std::rand() % 80) + 20);
 		info.players[player_index].units.emplace_back(mech);
 	}
 	for(auto &unit : info.players[player_index].units)

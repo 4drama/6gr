@@ -219,6 +219,13 @@ public:
 
 	void refresh();
 
+	void fill_energy(float value){
+		this->calculate_status(mech_status::current(value, 0));
+	};
+
+	void fill_heat(float value){
+		this->calculate_status(mech_status::current(0, value));
+	};
 
 	float get_energy_rate() const noexcept{
 		mech_status status = this->accumulate_status();

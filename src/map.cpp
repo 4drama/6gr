@@ -984,8 +984,9 @@ void player_respawn(game_info *info, client *client){
 		client->set_camera(-info->map[spawn_cell_index].pos);
 
 
-	std::shared_ptr<unit> mech = mech::create(player_index,
+	std::shared_ptr<mech> mech = mech::create(player_index,
 		spawn_cell_index, &info->item_db);
+	mech->fill_energy(1000);
 
 	info->map[spawn_cell_index].unit = mech;
 	info->players[player_index].units.emplace_back(mech);

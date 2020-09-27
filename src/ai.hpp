@@ -53,6 +53,9 @@ public:
 	ai(game_info *info_, uint32_t player_index_);
 	update(float time);
 private:
+	std::list<std::shared_ptr<unit>> get_viewed_enemy(
+		std::shared_ptr<unit> unit_ptr, uint32_t depth);
+
 	game_info *info;
 	uint32_t player_index;
 
