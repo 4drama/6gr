@@ -1206,6 +1206,20 @@ void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 void unit::update(game_info *info, uint32_t player_index, float time){
 	this->unit_update_move(info, player_index, time);
 	this->update_v(info, player_index, time);
+
+	if(this->is_destroy()){
+		this->player_index = UINT32_MAX;
+		info->players[player_index].units.remove(shared_from_this());
+		info->destroyed_units.emplace_back(shared_from_this());
+
+		auto &selected_units =
+			info->players[player_index].selected_units;
+		for(auto it = selected_units.begin(); it != selected_units.end() ; ++it){
+			if((*it).second.lock() == shared_from_this()){
+				selected_units.erase(it--);
+			}
+		}
+	}
 }
 
 void mech::update_v(game_info *info, uint32_t player_index, float time){

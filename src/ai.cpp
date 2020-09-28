@@ -16,7 +16,9 @@ std::list<std::shared_ptr<unit>> ai::get_viewed_enemy(
 	std::list<uint32_t> seen_area = area_around.filter(vision_map);
 
 	for(auto &cell : seen_area){
-		if(this->info->map[cell].unit != nullptr){
+		if((this->info->map[cell].unit != nullptr)
+			&& (this->info->map[cell].unit->player_index != UINT32_MAX)){
+
 			uint32_t player_index = this->info->map[cell].unit->player_index;
 			if(this->player.info->relationship[player_index]
 				== player_info::relationship_type::ENEMY){
@@ -179,7 +181,10 @@ ai::ai(game_info *info_, uint32_t player_index_)
 };
 
 ai::update(float time){
-	for(auto &state : unit_states){
-		state.update(time);
+	for(auto it = unit_states.begin(); it != unit_states.end(); ++it){
+		if(it->is_valid())
+			it->update(time);
+		else
+			unit_states.erase(it--);
 	}
 };

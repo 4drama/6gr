@@ -724,20 +724,29 @@ void prepare_units_sprites(game_info *info, client *client,
 	std::vector<bool> *vision_map =
 		get_vision_map(info, player_info.get_vision_players_indeces());
 
-	for(auto &player : info->players){
-		for(auto &unit : player.units){
-			if(vision_map->at(unit->cell_index)
-				&& (client->on_screen(&info->map[unit->cell_index]))){
+	auto draw_unit = [vision_map, info, client, &object_sprites]
+		(std::shared_ptr<unit> unit){
+		if(vision_map->at(unit->cell_index)
+			&& (client->on_screen(&info->map[unit->cell_index]))){
 
-				for(auto &sprite : unit->sprites){
-					sprite.setPosition( client->perspective(
-						draw_position(&info->map[unit->cell_index], client)
-							+ sf::Vector2f{2, -8}));
+			for(auto &sprite : unit->sprites){
+				sprite.setPosition( client->perspective(
+					draw_position(&info->map[unit->cell_index], client)
+						+ sf::Vector2f{2, -8}));
 
-					object_sprites.emplace_back(sprite);
-				}
+				object_sprites.emplace_back(sprite);
 			}
 		}
+	};
+
+	for(auto &player : info->players){
+		for(auto &unit : player.units){
+			draw_unit(unit);
+		}
+	}
+
+	for(auto &unit : info->destroyed_units){
+		draw_unit(unit);
 	}
 }
 

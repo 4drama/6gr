@@ -82,6 +82,7 @@ struct unit : std::enable_shared_from_this<unit>{
 	void open_vision(game_info *info, uint32_t player_index);
 	void update(game_info *info, uint32_t player_index, float time);
 
+	virtual bool is_destroy() const noexcept {return false;};
 	inline virtual float get_speed(terrain_en ter_type) const noexcept {return 0;};
 	virtual void draw_gui(game_info *info, client *client){return ;};
 	virtual bool interact_gui(game_info *info, client *client){return false;};
@@ -198,6 +199,8 @@ public:
 
 	mech(uint32_t player_index, uint32_t cell_index, item_db *item_db_ptr);
 
+	bool is_destroy() const noexcept override{
+		return torso.durability > 0 ? false : true;};
 	float get_speed(terrain_en ter_type) const noexcept override;
 
 	void draw_gui(game_info *info, client *client) override;

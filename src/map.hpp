@@ -171,7 +171,7 @@ struct player{
 	std::string name = "default";
 
 	garage garage;
-	std::vector< std::shared_ptr<unit> > units;
+	std::list< std::shared_ptr<unit> > units;
 
 	uint32_t selected_cell = UINT32_MAX;
 	std::vector< selected_unit_type > selected_units{};
@@ -185,6 +185,8 @@ struct game_info{
 
 	std::list<std::shared_ptr<projectile>> projectiles;
 	std::list<std::shared_ptr<effect>> effects;
+
+	std::list<std::shared_ptr<unit>> destroyed_units;
 
 	std::vector<cell> map;
 	std::vector<player> players;
