@@ -1159,6 +1159,21 @@ void unit::open_vision(game_info *info, uint32_t player_index){
 		this->cell_index, is_higher ? this->vision_range + 2 : this->vision_range);
 }
 
+std::list<weapon*> mech::get_ready_weapons(){
+	std::list<weapon*> res{};
+	std::array<part_of_mech*, 3> parts{&this->left_arm, &this->torso, &this->right_arm};
+
+	for(auto &part : parts){
+		for(auto &item : part->items){
+			weapon* weapon_ptr = item->is_weapon();
+			if(weapon_ptr && weapon_ptr->get_ready(this)){
+				res.emplace_back(weapon_ptr);
+			}
+		}
+	}
+	return res;
+}
+
 void unit::unit_update_move(game_info *info, uint32_t player_index, float time){
 	if(!this->path.size())
 		return;

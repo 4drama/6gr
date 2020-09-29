@@ -242,6 +242,8 @@ public:
 
 	void system_on();
 //	void system_off();
+
+	std::list<weapon*> get_ready_weapons();
 private:
 	static const std::string filename;
 	deferred_deletion_container<sf::Text> text_delete_contaier;

@@ -55,6 +55,59 @@ public:
 	std::shared_ptr<ai_state_base> update_and_get(float time) override;
 };
 
+class ai_go_to_target : public ai_state_base{
+public:
+	ai_go_to_target(ai* ai_ptr, std::shared_ptr<unit> unit_ptr,
+		std::shared_ptr<unit> target_ptr);
+	std::shared_ptr<ai_state_base> update_and_get(float time) override;
+private:
+	std::shared_ptr<unit> target_ptr;
+	uint32_t last_target_position;
+};
+
+class ai_attack : public ai_state_base{
+public:
+	constexpr static uint32_t attack_range = 4;
+
+	ai_attack(ai* ai_ptr, std::shared_ptr<unit> unit_ptr,
+		std::shared_ptr<unit> target_ptr);
+	std::shared_ptr<ai_state_base> update_and_get(float time) override;
+private:
+	std::shared_ptr<unit> target_ptr;
+	uint32_t last_target_position;
+};
+
+class ai_run_away : public ai_state_base{
+public:
+	ai_run_away(ai* ai_ptr, std::shared_ptr<unit> unit_ptr,
+		std::shared_ptr<unit> target_ptr);
+	std::shared_ptr<ai_state_base> update_and_get(float time) override;
+private:
+	std::shared_ptr<unit> target_ptr;
+
+	float after_warning_time = 0;
+};
+
+class ai_strafe : public ai_state_base{
+public:
+	ai_strafe(ai* ai_ptr, std::shared_ptr<unit> unit_ptr,
+		std::shared_ptr<unit> target_ptr);
+	std::shared_ptr<ai_state_base> update_and_get(float time) override;
+private:
+	std::shared_ptr<unit> target_ptr;
+	uint32_t strafe_cell;
+	uint32_t last_target_position;
+};
+
+class ai_state_find_in : public ai_state_base{
+public:
+	ai_state_find_in(ai* ai_ptr, std::shared_ptr<unit> unit_ptr,
+		uint32_t last_target_position);
+	std::shared_ptr<ai_state_base> update_and_get(float time) override;
+private:
+	uint32_t last_target_position = UINT32_MAX;
+};
+
 class ai{
 public:
 	ai(game_info *info_, uint32_t player_index_);
@@ -73,4 +126,9 @@ private:
 	friend class ai_state_init;
 	friend class ai_state_scout;
 	friend class ai_state_idle;
+	friend class ai_go_to_target;
+	friend class ai_attack;
+	friend class ai_run_away;
+	friend class ai_strafe;
+	friend class ai_state_find_in;
 };
