@@ -117,6 +117,7 @@ struct mech_status {
 	float current_fuel = 0;
 	float fuel_capacity = 0;
 
+	void validate() noexcept;
 	inline std::list<std::pair<mech_status::type, float>> get() const;
 
 	bool is_useful(mech_status::type type, float value) const noexcept;
@@ -273,14 +274,28 @@ private:
 	float move_calculate(float time, terrain_en ter_type) noexcept override;
 };
 
+inline void mech_status::validate() noexcept{
+	if(this->current_energy > this->energy_capacity)
+		this->current_energy = this->energy_capacity;
+	if(this->current_heat > this->heat_capacity)
+		this->current_heat = this->heat_capacity;
+	if(this->current_fuel > this->fuel_capacity)
+		this->current_fuel = this->fuel_capacity;
+}
+
+
+
 inline std::list<std::pair<mech_status::type, float>> mech_status::get() const{
 	std::list<std::pair<mech_status::type, float>> result{};
-	if(this->current_energy != 0)
+	if(this->current_energy != 0){
 		result.emplace_back(mech_status::type::energy, this->current_energy);
-	if(this->current_heat != 0)
+	}
+	if(this->current_heat != 0){
 		result.emplace_back(mech_status::type::heat, this->current_heat);
-	if(this->current_fuel != 0)
+	}
+	if(this->current_fuel != 0){
 		result.emplace_back(mech_status::type::fuel, this->current_fuel);
+	}
 	return result;
 }
 

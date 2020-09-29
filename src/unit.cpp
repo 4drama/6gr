@@ -1251,6 +1251,7 @@ void mech::update_v(game_info *info, uint32_t player_index, float time){
 
 			item->update(this, time / 10000);
 		}
+		zone.status.validate();
 	};
 	update(this->torso);
 	update(this->left_arm);
